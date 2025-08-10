@@ -1,103 +1,76 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Header } from "@/components/Header";
+import { BudgetCard } from "@/components/BudgetCard";
+import { AddTransactionDialog } from "@/components/AddTransactionDialog";
+import { ViewTransactionsDialog } from "@/components/ViewTransactionsDialog";
+
+// Sample data
+const sampleBudgets = [
+  { id: "1", name: "Supermercado", spent: 150.75, total: 400 },
+  { id: "2", name: "Salidas", spent: 280, total: 300 },
+  { id: "3", name: "Delivery", spent: 90.5, total: 150 },
+  { id: "4", name: "Transporte", spent: 45, total: 120 },
+];
+
+const sampleTransactions = [
+  { id: "1", date: new Date(2025, 7, 1), store: "Disco", amount: 78.50, budget: "Supermercado", time: "10:30" },
+  { id: "2", date: new Date(2025, 7, 3), store: "Café Martínez", amount: 45.00, budget: "Salidas", time: "14:15" },
+  { id: "3", date: new Date(2025, 7, 5), store: "McDonald's", amount: 35.75, budget: "Delivery", time: "20:45" },
+  { id: "4", date: new Date(2025, 7, 7), store: "Coto", amount: 72.25, budget: "Supermercado", time: "11:20" },
+  { id: "5", date: new Date(2025, 7, 8), store: "Uber", amount: 45.00, budget: "Transporte", time: "17:50" },
+];
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <Header onAddTransaction={() => setAddDialogOpen(true)} />
+        
+        <main className="mt-8">
+          <h2 className="text-xl font-semibold text-blue-700 mb-4">Mis Presupuestos</h2>
+          
+          {/* Responsive grid for budget cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {sampleBudgets.map((budget) => (
+              <BudgetCard
+                key={budget.id}
+                name={budget.name}
+                spent={budget.spent}
+                total={budget.total}
+              />
+            ))}
+          </div>
+          
+          {/* View all transactions button */}
+          <div className="flex justify-center mt-6">
+            <Button 
+              variant="link" 
+              className="text-green-700 font-medium"
+              onClick={() => setViewDialogOpen(true)}
+            >
+              Ver Todas las Transacciones
+            </Button>
+          </div>
+        </main>
+      </div>
+      
+      {/* Dialogs */}
+      <AddTransactionDialog 
+        open={addDialogOpen} 
+        onOpenChange={setAddDialogOpen} 
+      />
+      
+      <ViewTransactionsDialog 
+        open={viewDialogOpen} 
+        onOpenChange={setViewDialogOpen} 
+        transactions={sampleTransactions} 
+      />
     </div>
   );
 }
