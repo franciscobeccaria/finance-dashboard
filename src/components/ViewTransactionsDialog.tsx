@@ -3,6 +3,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -22,8 +23,9 @@ import {
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Edit2 } from "lucide-react";
+import { PlusCircle, X } from "lucide-react";
 
 interface Transaction {
   id: string;
@@ -33,6 +35,8 @@ interface Transaction {
   budget: string; // El nombre del presupuesto (para retrocompatibilidad)
   budgetId: string; // Nuevo: el ID del presupuesto
   time?: string;
+  paymentMethod?: string; // Nuevo: medio de pago (tarjeta, banco, etc)
+  description?: string; // Nuevo: descripción personalizada de la transacción
 }
 
 interface Budget {
@@ -40,6 +44,7 @@ interface Budget {
   name: string;
   total: number;
   spent: number;
+  isSpecial?: boolean;
 }
 
 interface ViewTransactionsDialogProps {
@@ -50,8 +55,6 @@ interface ViewTransactionsDialogProps {
   availableBudgets: Budget[];
 }
 
-// Las categorías ahora se reciben como prop
-
 export function ViewTransactionsDialog({
   open,
   onOpenChange,
@@ -60,48 +63,81 @@ export function ViewTransactionsDialog({
   availableBudgets = []
 }: ViewTransactionsDialogProps) {
   const [categoryFilter, setCategoryFilter] = useState<string | null>("all");
-  const [editingTransaction, setEditingTransaction] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  
-  // Ya no necesitamos calcular categorías únicas, usamos directamente availableBudgets
+  // Usamos Set para manejar múltiples transacciones en edición simultáneamente
+  const [editingDescriptionIds, setEditingDescriptionIds] = useState<Set<string>>(new Set());
   
   // Filter transactions based on selected category
   const filteredTransactions = useMemo(() => {
     if (!categoryFilter || categoryFilter === "all") return transactions;
     return transactions.filter(t => t.budgetId === categoryFilter);
   }, [transactions, categoryFilter]);
+
+  // Función para alternar el estado de edición de la descripción
+  const toggleDescriptionEdit = (id: string) => {
+    setEditingDescriptionIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Función para eliminar la descripción de una transacción
+  const handleDeleteDescription = (id: string) => {
+    // Aquí iría la lógica para eliminar la descripción
+    // En una implementación real, esto enviaría una petición al servidor
+    // Por ahora simulamos actualizando los datos en memoria
+    onCategorize(id, transactions.find(t => t.id === id)?.budgetId || "", 
+                  transactions.find(t => t.id === id)?.budget || "");
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px]">
+      <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-y-auto w-full">
         <DialogHeader>
-          <DialogTitle className="text-xl text-blue-700">Todas las Transacciones</DialogTitle>
-          <div className="mt-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">Filtrar por categoría:</span>
-              <Select
-                value={categoryFilter || "all"}
-                onValueChange={(value) => setCategoryFilter(value)}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Todas las categorías" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las categorías</SelectItem>
-                  {availableBudgets.map(budget => (
-                    <SelectItem key={budget.id} value={budget.id}>{budget.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <DialogTitle>Transacciones</DialogTitle>
+          <DialogDescription>
+            Lista de todas las transacciones
+          </DialogDescription>
         </DialogHeader>
-        <div className="max-h-[400px] overflow-y-auto">
+        
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500 font-medium">Filtrar por categoría:</span>
+            <Select
+              value={categoryFilter || "all"}
+              onValueChange={(value) => setCategoryFilter(value)}
+            >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Todas las categorías" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las categorías</SelectItem>
+              {availableBudgets.map(budget => (
+                <SelectItem 
+                  key={budget.id} 
+                  value={budget.id}
+                  className={budget.isSpecial ? "italic text-blue-600 font-semibold" : ""}
+                >
+                  {budget.name}{budget.isSpecial ? " (especial)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          </div>
+        </div>
+        
+        <div>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Comercio</TableHead>
                 <TableHead>Monto</TableHead>
+                <TableHead>Medio de Pago</TableHead>
                 <TableHead>Presupuesto</TableHead>
               </TableRow>
             </TableHeader>
@@ -112,59 +148,126 @@ export function ViewTransactionsDialog({
                     <TableCell className="font-medium">
                       {format(transaction.date, "dd/MM/yyyy")} {transaction.time || "12:00"}
                     </TableCell>
-                    <TableCell>{transaction.store}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{transaction.store}</span>
+                          {!transaction.description && !editingDescriptionIds.has(transaction.id) && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-5 w-5 p-0 text-blue-500 flex items-center justify-center rounded-full"
+                              onClick={() => toggleDescriptionEdit(transaction.id)}
+                              title="Añadir descripción"
+                            >
+                              <PlusCircle className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                        {transaction.description ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">{transaction.description}</span>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-5 w-5 p-0 text-red-500 flex items-center justify-center rounded-full"
+                              onClick={() => handleDeleteDescription(transaction.id)}
+                              title="Eliminar descripción"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : editingDescriptionIds.has(transaction.id) && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input
+                              className="h-6 text-xs"
+                              placeholder="Añadir descripción..."
+                              defaultValue=""
+                              // No necesitamos el onChange por ahora
+                              // Sólo guardamos en el blur si hay texto
+                              onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                                // Solo cerramos si el campo está vacío
+                                // Si hay texto, mantenemos el input abierto
+                                if (e.target.value.trim() === "") {
+                                  setEditingDescriptionIds(prev => {
+                                    const newSet = new Set(prev);
+                                    newSet.delete(transaction.id);
+                                    return newSet;
+                                  });
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-5 w-5 p-0 text-gray-400 flex items-center justify-center rounded-full"
+                              onClick={() => setEditingDescriptionIds(prev => {
+                                const newSet = new Set(prev);
+                                newSet.delete(transaction.id);
+                                return newSet;
+                              })}
+                              title="Cancelar"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{formatCurrency(transaction.amount)}</TableCell>
                     <TableCell>
-                      {editingTransaction === transaction.id ? (
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={selectedCategory}
-                            onValueChange={setSelectedCategory}
-                          >
-                            <SelectTrigger className="w-[150px]">
-                              <SelectValue placeholder="Seleccionar categoría" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableBudgets.map(budget => (
-                                <SelectItem key={budget.id} value={budget.id}>{budget.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button 
-                            onClick={() => {
-                              const selectedBudget = availableBudgets.find(b => b.id === selectedCategory);
-                              onCategorize(transaction.id, selectedCategory, selectedBudget?.name || '');
-                              setEditingTransaction(null);
-                            }}
-                            size="sm"
-                            disabled={!selectedCategory}
-                          >
-                            Guardar
-                          </Button>
-                        </div>
+                      {transaction.paymentMethod ? (
+                        <span className="text-sm font-medium">
+                          {transaction.paymentMethod}
+                        </span>
                       ) : (
-                        <div className="flex items-center justify-between">
-                          <span className={`${!transaction.budgetId ? 'text-gray-400 italic' : ''}`}>
-                            {transaction.budgetId ? availableBudgets.find(b => b.id === transaction.budgetId)?.name || 'Sin categoría' : 'Sin categoría'}
-                          </span>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => {
-                              setEditingTransaction(transaction.id);
-                              setSelectedCategory(transaction.budgetId || "");
-                            }}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <span className="text-sm text-gray-400 italic">
+                          No especificado
+                        </span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-between">
+                        <Select
+                          value={transaction.budgetId || "uncategorized"}
+                          onValueChange={(value) => {
+                            if (value === "uncategorized") {
+                              // Caso para "Sin categoría"
+                              onCategorize(transaction.id, "", "");
+                            } else {
+                              const selectedBudget = availableBudgets.find(b => b.id === value);
+                              if (selectedBudget) {
+                                onCategorize(transaction.id, value, selectedBudget.name || '');
+                              }
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Sin categoría">
+                              {transaction.budgetId ? transaction.budget : "Sin categoría"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="uncategorized">Sin categoría</SelectItem>
+                            {availableBudgets.map(budget => (
+                              <SelectItem 
+                                key={budget.id} 
+                                value={budget.id}
+                                className={budget.isSpecial ? "italic text-blue-600 font-semibold" : ""}
+                              >
+                                {budget.name}{budget.isSpecial ? " (especial)" : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-4 text-gray-500">
+                  <TableCell colSpan={5} className="text-center py-4 text-gray-500">
                     No hay transacciones para mostrar
                   </TableCell>
                 </TableRow>

@@ -17,6 +17,7 @@ export interface Budget {
   name: string;
   spent: number;
   total: number;
+  isSpecial?: boolean; // Indica si es una categoría especial como "Movimientos"
 }
 
 interface EditBudgetDialogProps {

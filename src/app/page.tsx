@@ -22,18 +22,27 @@ interface UITransaction {
   budget: string;
   budgetId: string;
   time?: string;
+  paymentMethod?: string; // Nuevo campo para el medio de pago
+  description?: string; // Nuevo campo para descripción personalizada
 }
+
+// Definir categoría especial para movimientos (no aparece como presupuesto)
+const MOVIMIENTOS_CATEGORY = {
+  id: "movimientos",
+  name: "Movimientos",
+  isSpecial: true, // Flag para identificarla como categoría especial
+};
 
 // Define our predefined budget categories
 const predefinedBudgets = [
-  { id: "1", name: "Supermercado", spent: 0, total: 500 },
-  { id: "2", name: "Restaurantes", spent: 0, total: 300 },
-  { id: "3", name: "Transporte", spent: 0, total: 200 },
-  { id: "4", name: "Entretenimiento", spent: 0, total: 250 },
-  { id: "5", name: "Servicios", spent: 0, total: 400 },
-  { id: "6", name: "Salud", spent: 0, total: 350 },
-  { id: "7", name: "Ropa", spent: 0, total: 200 },
-  { id: "8", name: "Otros", spent: 0, total: 150 }
+  { id: "1", name: "Supermercado", spent: 0, total: 500, isSpecial: false },
+  { id: "2", name: "Restaurantes", spent: 0, total: 300, isSpecial: false },
+  { id: "3", name: "Transporte", spent: 0, total: 200, isSpecial: false },
+  { id: "4", name: "Entretenimiento", spent: 0, total: 250, isSpecial: false },
+  { id: "5", name: "Servicios", spent: 0, total: 400, isSpecial: false },
+  { id: "6", name: "Salud", spent: 0, total: 350, isSpecial: false },
+  { id: "7", name: "Ropa", spent: 0, total: 200, isSpecial: false },
+  { id: "8", name: "Otros", spent: 0, total: 150, isSpecial: false }
 ];
 
 export default function Home() {
@@ -52,6 +61,17 @@ export default function Home() {
   
   // State for budgets (initialized with predefined ones)
   const [budgets, setBudgets] = useState<BudgetType[]>(predefinedBudgets);
+  
+  // Siempre asegurémonos de tener la categoría especial "Movimientos" disponible para transacciones
+  // pero no se muestra como presupuesto
+  const allCategories = useMemo<BudgetType[]>(() => {
+    // Verificar si ya está incluida en los presupuestos (no debería, pero por seguridad)
+    const movimientosExists = budgets.some(b => b.id === MOVIMIENTOS_CATEGORY.id);
+    if (!movimientosExists) {
+      return [...budgets, {...MOVIMIENTOS_CATEGORY, spent: 0, total: 0}];
+    }
+    return budgets;
+  }, [budgets]);
   
   // Calculate spent amounts for each budget based on categorized transactions
   const budgetsWithSpent = useMemo<BudgetType[]>(() => {
@@ -73,6 +93,11 @@ export default function Home() {
     
     return workingBudgets;
   }, [uiTransactions, budgets]);
+  
+  // Filtrar presupuestos para mostrar solo los no especiales en la UI
+  const displayBudgets = useMemo(() => {
+    return budgetsWithSpent.filter(budget => !budget.isSpecial);
+  }, [budgetsWithSpent]);
 
   // Handle transaction categorization
   const handleCategorizeTransaction = (transactionId: string, budgetId: string, budgetName: string) => {
@@ -87,6 +112,11 @@ export default function Home() {
   
   // Handle opening the edit budget dialog
   const handleEditBudget = (budget: BudgetType) => {
+    // No permitir editar la categoría especial Movimientos
+    if (budget.id === MOVIMIENTOS_CATEGORY.id) {
+      return;
+    }
+    
     setCurrentEditBudget(budget);
     setEditBudgetDialogOpen(true);
   };
@@ -99,23 +129,33 @@ export default function Home() {
   
   // Handle saving a budget (new or edited)
   const handleSaveBudget = (budget: Omit<BudgetType, "spent">) => {
+    // Prevenir edición o creación de presupuestos con el ID de movimientos
+    if (budget.id === MOVIMIENTOS_CATEGORY.id) {
+      return;
+    }
+    
     if (currentEditBudget) {
       // Editing existing budget
       setBudgets(prev => 
         prev.map(b => 
           b.id === budget.id 
-            ? { ...budget, spent: b.spent } 
+            ? { ...budget, spent: b.spent, isSpecial: false } 
             : b
         )
       );
     } else {
       // Adding new budget
-      setBudgets(prev => [...prev, { ...budget, spent: 0 }]);
+      setBudgets(prev => [...prev, { ...budget, spent: 0, isSpecial: false }]);
     }
   };
   
   // Handle deleting a budget
   const handleDeleteBudget = (budgetId: string) => {
+    // No permitir eliminar la categoría especial de Movimientos
+    if (budgetId === MOVIMIENTOS_CATEGORY.id) {
+      return;
+    }
+    
     // Remove the budget
     setBudgets(prev => prev.filter(b => b.id !== budgetId));
     
@@ -146,7 +186,8 @@ export default function Home() {
             amount: transaction.amount,
             budget: '', // No category name assigned initially
             budgetId: '', // No category ID assigned initially
-            time: `${hours}:${minutes}`
+            time: `${hours}:${minutes}`,
+            paymentMethod: transaction.source // Mapeando source como medio de pago
           };
         });
       
@@ -196,20 +237,28 @@ export default function Home() {
           {!isLoading && !error && (
             <div className="mb-6">
               <TotalBudgetCard
-                spent={uiTransactions.reduce((sum, transaction) => sum + transaction.amount, 0)}
-                total={budgetsWithSpent.reduce((sum, budget) => sum + budget.total, 0)}
+                spent={uiTransactions
+                  .filter(t => t.budgetId !== MOVIMIENTOS_CATEGORY.id) // Excluir movimientos del cálculo
+                  .reduce((sum, transaction) => sum + transaction.amount, 0)}
+                total={displayBudgets.reduce((sum, budget) => sum + budget.total, 0)}
               />
             </div>
           )}
           
-          {/* Responsive grid for budget cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {/* Responsive grid for budget cards - adaptado según la cantidad de presupuestos */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${displayBudgets.length === 1 
+            ? "lg:grid-cols-1" 
+            : displayBudgets.length === 2 
+            ? "lg:grid-cols-2" 
+            : displayBudgets.length === 3 
+            ? "lg:grid-cols-3" 
+            : "lg:grid-cols-4"} gap-4 mb-8`}>
             {budgetsWithSpent.length === 0 && !isLoading && !error && (
               <div className="col-span-full text-center py-8 text-gray-500">
                 No se encontraron presupuestos
               </div>
             )}
-            {budgetsWithSpent.map((budget) => (
+            {displayBudgets.map((budget) => (
               <div key={budget.id} className="relative group">
                 <BudgetCard
                   name={budget.name}
@@ -248,7 +297,7 @@ export default function Home() {
         onOpenChange={setViewDialogOpen}
         transactions={uiTransactions}
         onCategorize={handleCategorizeTransaction}
-        availableBudgets={budgets}
+        availableBudgets={allCategories}
       />
       
       <EditBudgetDialog
