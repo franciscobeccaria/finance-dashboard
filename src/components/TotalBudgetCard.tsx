@@ -5,6 +5,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { formatCurrency } from "@/lib/utils";
 
 interface TotalBudgetCardProps {
   spent: number;
@@ -14,17 +15,6 @@ interface TotalBudgetCardProps {
 export function TotalBudgetCard({ spent, total }: TotalBudgetCardProps) {
   const percentage = Math.min(Math.round((spent / total) * 100), 100);
   
-  // Format the currency amounts
-  const formattedSpent = new Intl.NumberFormat('es-AR', { 
-    style: 'currency', 
-    currency: 'ARS' 
-  }).format(spent);
-  
-  const formattedTotal = new Intl.NumberFormat('es-AR', { 
-    style: 'currency', 
-    currency: 'ARS' 
-  }).format(total);
-  
   return (
     <Card className="col-span-full bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-500 shadow-lg">
       <CardHeader className="pb-2">
@@ -32,8 +22,7 @@ export function TotalBudgetCard({ spent, total }: TotalBudgetCardProps) {
       </CardHeader>
       <CardContent>
         <div className="flex justify-between items-baseline mb-2">
-          <div className="text-3xl font-bold text-blue-900">{formattedSpent}</div>
-          <div className="text-lg text-gray-600">de {formattedTotal}</div>
+          <h2 className="text-2xl font-bold mb-2">{formatCurrency(spent)} <span className="text-lg font-normal text-gray-600">/ {formatCurrency(total)}</span></h2>
         </div>
         <Progress 
           value={percentage} 

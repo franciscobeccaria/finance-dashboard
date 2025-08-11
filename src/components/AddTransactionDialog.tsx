@@ -70,7 +70,7 @@ export function AddTransactionDialog({
               id="monto"
               type="number"
               step="0.01"
-              placeholder="0.00"
+              placeholder="0"
               className="col-span-3"
             />
           </div>

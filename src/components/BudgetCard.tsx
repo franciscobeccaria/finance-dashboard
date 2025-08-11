@@ -5,6 +5,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { formatCurrency } from "@/lib/utils";
 
 interface BudgetCardProps {
   name: string;
@@ -29,10 +30,8 @@ export function BudgetCard({ name, spent, total }: BudgetCardProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          <p className="text-lg font-bold text-gray-900">{formatCurrency(spent)} <span className="text-sm font-normal text-gray-500">/ {formatCurrency(total)}</span></p>
           <div className="flex justify-between items-center">
-            <p className="text-sm text-gray-600">
-              ${spent.toFixed(2)} / ${total.toFixed(2)}
-            </p>
             <p className="text-sm font-medium">{percentage}%</p>
           </div>
           <Progress value={percentage} className={`h-2 ${getProgressColor()}`} />

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Edit2 } from "lucide-react";
 
@@ -124,7 +125,7 @@ export function ViewTransactionsDialog({
                       {format(transaction.date, "dd/MM/yyyy")} {transaction.time || "12:00"}
                     </TableCell>
                     <TableCell>{transaction.store}</TableCell>
-                    <TableCell>${transaction.amount.toFixed(2)}</TableCell>
+                    <TableCell>{formatCurrency(transaction.amount)}</TableCell>
                     <TableCell>
                       {editingTransaction === transaction.id ? (
                         <div className="flex items-center gap-2">
