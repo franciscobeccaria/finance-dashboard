@@ -5,17 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { BudgetCard } from "@/components/BudgetCard";
 import { TotalBudgetCard } from "@/components/TotalBudgetCard";
+import { EditBudgetDialog, Budget as BudgetType } from "@/components/EditBudgetDialog";
+import { PlusCircle, Edit } from "lucide-react";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { ViewTransactionsDialog } from "@/components/ViewTransactionsDialog";
 import { fetchTransactions, ParsedTransaction } from "@/services/api";
 
-// Interface for the budget data structure used in the UI
-interface Budget {
-  id: string;
-  name: string;
-  spent: number;
-  total: number;
-}
+// We're now using BudgetType from EditBudgetDialog.tsx
 
 // Interface for the transaction data structure used in the UI
 interface UITransaction {
@@ -42,6 +38,8 @@ const predefinedBudgets = [
 export default function Home() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editBudgetDialogOpen, setEditBudgetDialogOpen] = useState(false);
+  const [currentEditBudget, setCurrentEditBudget] = useState<BudgetType | undefined>(undefined);
   
   // State for API data
   const [transactions, setTransactions] = useState<ParsedTransaction[]>([]);
@@ -51,10 +49,16 @@ export default function Home() {
   // State for categorized transactions and budget calculation
   const [uiTransactions, setUiTransactions] = useState<UITransaction[]>([]);
   
-  // Calculate budgets based on categorized transactions
-  const budgets = useMemo<Budget[]>(() => {
-    // Start with predefined budgets (with zero spent)
-    const workingBudgets = [...predefinedBudgets];
+  // State for budgets (initialized with predefined ones)
+  const [budgets, setBudgets] = useState<BudgetType[]>(predefinedBudgets);
+  
+  // Calculate spent amounts for each budget based on categorized transactions
+  const budgetsWithSpent = useMemo<BudgetType[]>(() => {
+    // Start with current budgets (with zero spent)
+    const workingBudgets = budgets.map(budget => ({
+      ...budget,
+      spent: 0
+    }));
     
     // Update spent amounts based on categorized transactions
     uiTransactions.forEach(transaction => {
@@ -67,7 +71,7 @@ export default function Home() {
     });
     
     return workingBudgets;
-  }, [uiTransactions]);
+  }, [uiTransactions, budgets]);
 
   // Handle transaction categorization
   const handleCategorizeTransaction = (transactionId: string, category: string) => {
@@ -78,6 +82,53 @@ export default function Home() {
           : transaction
       )
     );
+  };
+  
+  // Handle opening the edit budget dialog
+  const handleEditBudget = (budget: BudgetType) => {
+    setCurrentEditBudget(budget);
+    setEditBudgetDialogOpen(true);
+  };
+  
+  // Handle creating a new budget
+  const handleAddBudget = () => {
+    setCurrentEditBudget(undefined);
+    setEditBudgetDialogOpen(true);
+  };
+  
+  // Handle saving a budget (new or edited)
+  const handleSaveBudget = (budget: Omit<BudgetType, "spent">) => {
+    if (currentEditBudget) {
+      // Editing existing budget
+      setBudgets(prev => 
+        prev.map(b => 
+          b.id === budget.id 
+            ? { ...budget, spent: b.spent } 
+            : b
+        )
+      );
+    } else {
+      // Adding new budget
+      setBudgets(prev => [...prev, { ...budget, spent: 0 }]);
+    }
+  };
+  
+  // Handle deleting a budget
+  const handleDeleteBudget = (budgetId: string) => {
+    // Remove the budget
+    setBudgets(prev => prev.filter(b => b.id !== budgetId));
+    
+    // Remove the category from any transactions using this budget
+    const budgetName = budgets.find(b => b.id === budgetId)?.name;
+    if (budgetName) {
+      setUiTransactions(prev => 
+        prev.map(transaction => 
+          transaction.budget === budgetName 
+            ? { ...transaction, budget: '' } 
+            : transaction
+        )
+      );
+    }
   };
   
   // Transform API transactions to UI format when API data changes
@@ -134,32 +185,44 @@ export default function Home() {
         <Header onAddTransaction={() => setAddDialogOpen(true)} />
         
         <main className="mt-8">
-          <h2 className="text-xl font-semibold text-blue-700 mb-4">Mis Presupuestos</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-blue-700">Mis Presupuestos</h2>
+            <Button onClick={handleAddBudget} variant="outline" className="flex items-center">
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Nuevo Presupuesto
+            </Button>
+          </div>
           
           {/* Total Budget Summary Card */}
           {!isLoading && !error && (
             <div className="mb-6">
               <TotalBudgetCard
-                spent={budgets.reduce((sum, budget) => sum + budget.spent, 0)}
-                total={budgets.reduce((sum, budget) => sum + budget.total, 0)}
+                spent={budgetsWithSpent.reduce((sum, budget) => sum + budget.spent, 0)}
+                total={budgetsWithSpent.reduce((sum, budget) => sum + budget.total, 0)}
               />
             </div>
           )}
           
           {/* Responsive grid for budget cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {budgets.length === 0 && !isLoading && !error && (
+            {budgetsWithSpent.length === 0 && !isLoading && !error && (
               <div className="col-span-full text-center py-8 text-gray-500">
                 No se encontraron presupuestos
               </div>
             )}
-            {budgets.map((budget) => (
-              <BudgetCard
-                key={budget.id}
-                name={budget.name}
-                spent={budget.spent}
-                total={budget.total}
-              />
+            {budgetsWithSpent.map((budget) => (
+              <div key={budget.id} className="relative group">
+                <BudgetCard
+                  name={budget.name}
+                  spent={budget.spent}
+                  total={budget.total}
+                />
+                <button 
+                  onClick={() => handleEditBudget(budget)}
+                  className="absolute top-2 right-2 p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Edit className="h-4 w-4" />
+                </button>
+              </div>
             ))}
           </div>
           
@@ -186,6 +249,14 @@ export default function Home() {
         onOpenChange={setViewDialogOpen}
         transactions={uiTransactions}
         onCategorize={handleCategorizeTransaction}
+      />
+      
+      <EditBudgetDialog
+        open={editBudgetDialogOpen}
+        onOpenChange={setEditBudgetDialogOpen}
+        budget={currentEditBudget}
+        onSave={handleSaveBudget}
+        onDelete={handleDeleteBudget}
       />
     </div>
   );
