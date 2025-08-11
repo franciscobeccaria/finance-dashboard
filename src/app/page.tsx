@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { BudgetCard } from "@/components/BudgetCard";
+import { BudgetCardSkeleton } from "@/components/BudgetCardSkeleton";
 import { TotalBudgetCard } from "@/components/TotalBudgetCard";
+import { TotalBudgetCardSkeleton } from "@/components/TotalBudgetCardSkeleton";
 import { EditBudgetDialog, Budget as BudgetType } from "@/components/EditBudgetDialog";
-import { PlusCircle, Edit } from "lucide-react";
+import { Edit } from "lucide-react";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { ViewTransactionsDialog } from "@/components/ViewTransactionsDialog";
 import { fetchTransactions, ParsedTransaction } from "@/services/api";
@@ -222,19 +223,21 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <Header onAddTransaction={() => setAddDialogOpen(true)} />
+        <Header 
+          onAddTransaction={() => setAddDialogOpen(true)} 
+          onCreateBudget={handleAddBudget}
+          onViewTransactions={() => setViewDialogOpen(true)}
+          isLoading={isLoading}
+        />
         
-        <main className="mt-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-blue-700">Mis Presupuestos</h2>
-            <Button onClick={handleAddBudget} variant="outline" className="flex items-center">
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Nuevo Presupuesto
-            </Button>
-          </div>
+        <main>
           
           {/* Total Budget Summary Card */}
-          {!isLoading && !error && (
+          {isLoading ? (
+            <div className="mb-6">
+              <TotalBudgetCardSkeleton />
+            </div>
+          ) : !error && (
             <div className="mb-6">
               <TotalBudgetCard
                 spent={uiTransactions
@@ -246,44 +249,49 @@ export default function Home() {
           )}
           
           {/* Responsive grid for budget cards - adaptado según la cantidad de presupuestos */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 ${displayBudgets.length === 1 
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${isLoading ? "lg:grid-cols-4" : displayBudgets.length === 1 
             ? "lg:grid-cols-1" 
             : displayBudgets.length === 2 
             ? "lg:grid-cols-2" 
             : displayBudgets.length === 3 
             ? "lg:grid-cols-3" 
             : "lg:grid-cols-4"} gap-4 mb-8`}>
+            {/* Estado de carga con skeletons */}
+            {isLoading && (
+              <>
+                <BudgetCardSkeleton />
+                <BudgetCardSkeleton />
+                <BudgetCardSkeleton />
+                <BudgetCardSkeleton />
+              </>
+            )}
+            
+            {/* Mensaje cuando no hay presupuestos */}
             {budgetsWithSpent.length === 0 && !isLoading && !error && (
               <div className="col-span-full text-center py-8 text-gray-500">
                 No se encontraron presupuestos
               </div>
             )}
-            {displayBudgets.map((budget) => (
+            
+            {/* Lista de presupuestos */}
+            {!isLoading && displayBudgets.map((budget) => (
               <div key={budget.id} className="relative group">
                 <BudgetCard
                   name={budget.name}
-                  spent={budget.spent}
+                  spent={budgetsWithSpent.find(b => b.id === budget.id)?.spent || 0}
                   total={budget.total}
                 />
                 <button 
                   onClick={() => handleEditBudget(budget)}
-                  className="absolute top-2 right-2 p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Edit className="h-4 w-4" />
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white p-1 rounded-full"
+                >
+                  <Edit className="h-4 w-4 text-gray-500" />
                 </button>
               </div>
             ))}
           </div>
           
-          {/* View all transactions button */}
-          <div className="flex justify-center mt-6">
-            <Button 
-              variant="link" 
-              className="text-green-700 font-medium"
-              onClick={() => setViewDialogOpen(true)}
-            >
-              Ver Todas las Transacciones
-            </Button>
-          </div>
+          {/* Ya no es necesario el botón aquí, se movió al Header */}
         </main>
       </div>
       
