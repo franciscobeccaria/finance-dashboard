@@ -20,6 +20,7 @@ interface UITransaction {
   store: string;
   amount: number;
   budget: string;
+  budgetId: string;
   time?: string;
 }
 
@@ -62,8 +63,8 @@ export default function Home() {
     
     // Update spent amounts based on categorized transactions
     uiTransactions.forEach(transaction => {
-      if (transaction.budget) {
-        const budgetIndex = workingBudgets.findIndex(b => b.name === transaction.budget);
+      if (transaction.budgetId) {
+        const budgetIndex = workingBudgets.findIndex(b => b.id === transaction.budgetId);
         if (budgetIndex !== -1) {
           workingBudgets[budgetIndex].spent += transaction.amount;
         }
@@ -74,11 +75,11 @@ export default function Home() {
   }, [uiTransactions, budgets]);
 
   // Handle transaction categorization
-  const handleCategorizeTransaction = (transactionId: string, category: string) => {
+  const handleCategorizeTransaction = (transactionId: string, budgetId: string, budgetName: string) => {
     setUiTransactions(prev => 
       prev.map(transaction => 
         transaction.id === transactionId 
-          ? { ...transaction, budget: category } 
+          ? { ...transaction, budget: budgetName, budgetId: budgetId } 
           : transaction
       )
     );
@@ -119,16 +120,13 @@ export default function Home() {
     setBudgets(prev => prev.filter(b => b.id !== budgetId));
     
     // Remove the category from any transactions using this budget
-    const budgetName = budgets.find(b => b.id === budgetId)?.name;
-    if (budgetName) {
-      setUiTransactions(prev => 
-        prev.map(transaction => 
-          transaction.budget === budgetName 
-            ? { ...transaction, budget: '' } 
-            : transaction
-        )
-      );
-    }
+    setUiTransactions(prev => 
+      prev.map(transaction => 
+        transaction.budgetId === budgetId 
+          ? { ...transaction, budget: '', budgetId: '' } 
+          : transaction
+      )
+    );
   };
   
   // Transform API transactions to UI format when API data changes
@@ -146,7 +144,8 @@ export default function Home() {
             date: date,
             store: transaction.merchant,
             amount: transaction.amount,
-            budget: '', // No category assigned initially
+            budget: '', // No category name assigned initially
+            budgetId: '', // No category ID assigned initially
             time: `${hours}:${minutes}`
           };
         });
@@ -197,7 +196,7 @@ export default function Home() {
           {!isLoading && !error && (
             <div className="mb-6">
               <TotalBudgetCard
-                spent={budgetsWithSpent.reduce((sum, budget) => sum + budget.spent, 0)}
+                spent={uiTransactions.reduce((sum, transaction) => sum + transaction.amount, 0)}
                 total={budgetsWithSpent.reduce((sum, budget) => sum + budget.total, 0)}
               />
             </div>
@@ -249,7 +248,7 @@ export default function Home() {
         onOpenChange={setViewDialogOpen}
         transactions={uiTransactions}
         onCategorize={handleCategorizeTransaction}
-        availableBudgets={budgets.map(budget => budget.name)}
+        availableBudgets={budgets}
       />
       
       <EditBudgetDialog

@@ -30,16 +30,24 @@ interface Transaction {
   date: Date;
   store: string;
   amount: number;
-  budget: string;
+  budget: string; // El nombre del presupuesto (para retrocompatibilidad)
+  budgetId: string; // Nuevo: el ID del presupuesto
   time?: string;
+}
+
+interface Budget {
+  id: string;
+  name: string;
+  total: number;
+  spent: number;
 }
 
 interface ViewTransactionsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   transactions: Transaction[];
-  onCategorize?: (transactionId: string, category: string) => void;
-  availableBudgets: string[]; // Lista actualizada de presupuestos disponibles
+  onCategorize?: (transactionId: string, budgetId: string, budgetName: string) => void;
+  availableBudgets: Budget[];
 }
 
 // Las categorías ahora se reciben como prop
@@ -55,24 +63,12 @@ export function ViewTransactionsDialog({
   const [editingTransaction, setEditingTransaction] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   
-  // Get unique categories for the filter
-  const categories = useMemo(() => {
-    const uniqueCategories = new Set<string>();
-    // Add all available budgets from the main component
-    availableBudgets.forEach(category => uniqueCategories.add(category));
-    // Add categories from transactions (if any are assigned that aren't in availableBudgets)
-    transactions.forEach(transaction => {
-      if (transaction.budget) {
-        uniqueCategories.add(transaction.budget);
-      }
-    });
-    return Array.from(uniqueCategories);
-  }, [transactions, availableBudgets]);
+  // Ya no necesitamos calcular categorías únicas, usamos directamente availableBudgets
   
   // Filter transactions based on selected category
   const filteredTransactions = useMemo(() => {
     if (!categoryFilter || categoryFilter === "all") return transactions;
-    return transactions.filter(t => t.budget === categoryFilter);
+    return transactions.filter(t => t.budgetId === categoryFilter);
   }, [transactions, categoryFilter]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -91,8 +87,8 @@ export function ViewTransactionsDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las categorías</SelectItem>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                  {availableBudgets.map(budget => (
+                    <SelectItem key={budget.id} value={budget.id}>{budget.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -129,14 +125,15 @@ export function ViewTransactionsDialog({
                               <SelectValue placeholder="Seleccionar categoría" />
                             </SelectTrigger>
                             <SelectContent>
-                              {availableBudgets.map(category => (
-                                <SelectItem key={category} value={category}>{category}</SelectItem>
+                              {availableBudgets.map(budget => (
+                                <SelectItem key={budget.id} value={budget.id}>{budget.name}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                           <Button 
                             onClick={() => {
-                              onCategorize(transaction.id, selectedCategory);
+                              const selectedBudget = availableBudgets.find(b => b.id === selectedCategory);
+                              onCategorize(transaction.id, selectedCategory, selectedBudget?.name || '');
                               setEditingTransaction(null);
                             }}
                             size="sm"
@@ -147,15 +144,15 @@ export function ViewTransactionsDialog({
                         </div>
                       ) : (
                         <div className="flex items-center justify-between">
-                          <span className={`${!transaction.budget ? 'text-gray-400 italic' : ''}`}>
-                            {transaction.budget || 'Sin categoría'}
+                          <span className={`${!transaction.budgetId ? 'text-gray-400 italic' : ''}`}>
+                            {transaction.budgetId ? availableBudgets.find(b => b.id === transaction.budgetId)?.name || 'Sin categoría' : 'Sin categoría'}
                           </span>
                           <Button 
                             variant="ghost" 
                             size="sm" 
                             onClick={() => {
                               setEditingTransaction(transaction.id);
-                              setSelectedCategory(transaction.budget || "");
+                              setSelectedCategory(transaction.budgetId || "");
                             }}
                           >
                             <Edit2 className="h-4 w-4" />
