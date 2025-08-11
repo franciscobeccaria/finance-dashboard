@@ -100,12 +100,20 @@ export default function Home() {
     return budgetsWithSpent.filter(budget => !budget.isSpecial);
   }, [budgetsWithSpent]);
 
-  // Handle transaction categorization
-  const handleCategorizeTransaction = (transactionId: string, budgetId: string, budgetName: string) => {
+  // Handle transaction categorization and description updates
+  const handleCategorizeTransaction = (transactionId: string, budgetId: string, budgetName: string, description?: string) => {
     setUiTransactions(prev => 
       prev.map(transaction => 
         transaction.id === transactionId 
-          ? { ...transaction, budget: budgetName, budgetId: budgetId } 
+          ? { 
+              ...transaction, 
+              budget: budgetName, 
+              budgetId: budgetId,
+              // Si description es undefined, eliminamos la propiedad
+              // Si tiene un valor, lo actualizamos
+              // Si no se proporciona (parámetro omitido), mantenemos el valor actual
+              ...(description !== undefined ? { description } : {})
+            } 
           : transaction
       )
     );

@@ -24,7 +24,7 @@ export async function fetchTransactions(): Promise<ParsedTransaction[]> {
   };
 
   try {
-    const response = await fetch('http://localhost:3000/gmail/extract', {
+    const response = await fetch('http://localhost:3001/gmail/extract', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

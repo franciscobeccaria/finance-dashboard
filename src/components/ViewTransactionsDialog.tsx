@@ -23,6 +23,7 @@ import {
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
+import { getPaymentMethodColor } from "@/lib/paymentMethodColors";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, X } from "lucide-react";
@@ -63,14 +64,34 @@ export function ViewTransactionsDialog({
   availableBudgets = []
 }: ViewTransactionsDialogProps) {
   const [categoryFilter, setCategoryFilter] = useState<string | null>("all");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string | null>("all");
   // Usamos Set para manejar múltiples transacciones en edición simultáneamente
   const [editingDescriptionIds, setEditingDescriptionIds] = useState<Set<string>>(new Set());
   
-  // Filter transactions based on selected category
+  // Get unique payment methods from transactions
+  const uniquePaymentMethods = useMemo(() => {
+    const methods = new Set<string>();
+    transactions.forEach(t => {
+      if (t.paymentMethod) {
+        methods.add(t.paymentMethod);
+      }
+    });
+    return Array.from(methods).sort();
+  }, [transactions]);
+
+  // Filter transactions based on selected category and payment method
   const filteredTransactions = useMemo(() => {
-    if (!categoryFilter || categoryFilter === "all") return transactions;
-    return transactions.filter(t => t.budgetId === categoryFilter);
-  }, [transactions, categoryFilter]);
+    return transactions.filter(t => {
+      // Filter by category
+      const matchesCategory = !categoryFilter || categoryFilter === "all" || t.budgetId === categoryFilter;
+      
+      // Filter by payment method
+      const matchesPaymentMethod = !paymentMethodFilter || paymentMethodFilter === "all" || 
+        (t.paymentMethod === paymentMethodFilter);
+      
+      return matchesCategory && matchesPaymentMethod;
+    });
+  }, [transactions, categoryFilter, paymentMethodFilter]);
 
   // Función para alternar el estado de edición de la descripción
   const toggleDescriptionEdit = (id: string) => {
@@ -85,14 +106,7 @@ export function ViewTransactionsDialog({
     });
   };
 
-  // Función para eliminar la descripción de una transacción
-  const handleDeleteDescription = (id: string) => {
-    // Aquí iría la lógica para eliminar la descripción
-    // En una implementación real, esto enviaría una petición al servidor
-    // Por ahora simulamos actualizando los datos en memoria
-    onCategorize(id, transactions.find(t => t.id === id)?.budgetId || "", 
-                  transactions.find(t => t.id === id)?.budget || "");
-  };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -105,28 +119,54 @@ export function ViewTransactionsDialog({
         </DialogHeader>
         
         <div className="flex items-center justify-between gap-2 mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 font-medium">Filtrar por categoría:</span>
-            <Select
-              value={categoryFilter || "all"}
-              onValueChange={(value) => setCategoryFilter(value)}
-            >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Todas las categorías" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las categorías</SelectItem>
-              {availableBudgets.map(budget => (
-                <SelectItem 
-                  key={budget.id} 
-                  value={budget.id}
-                  className={budget.isSpecial ? "italic text-blue-600 font-semibold" : ""}
-                >
-                  {budget.name}{budget.isSpecial ? " (especial)" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            {/* Filtro de categoría */}
+            <div className="flex items-center gap-2">
+              <Select
+                value={categoryFilter || "all"}
+                onValueChange={(value) => setCategoryFilter(value)}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Todas las categorías" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las categorías</SelectItem>
+                  {availableBudgets.map(budget => (
+                    <SelectItem 
+                      key={budget.id} 
+                      value={budget.id}
+                      className={budget.isSpecial ? "italic text-blue-600 font-semibold" : ""}
+                    >
+                      {budget.name}{budget.isSpecial ? " (especial)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Filtro de medio de pago */}
+            <div className="flex items-center gap-2">
+              <Select
+                value={paymentMethodFilter || "all"}
+                onValueChange={(value) => setPaymentMethodFilter(value)}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Todos los medios" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los medios</SelectItem>
+                  {uniquePaymentMethods.map(method => (
+                    <SelectItem 
+                      key={method} 
+                      value={method}
+                      className={`${getPaymentMethodColor(method) || ''}`}
+                    >
+                      {method}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
         
@@ -144,19 +184,19 @@ export function ViewTransactionsDialog({
             <TableBody>
               {filteredTransactions.length > 0 ? (
                 filteredTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
+                  <TableRow key={transaction.id} className="group">
                     <TableCell className="font-medium">
                       {format(transaction.date, "dd/MM/yyyy")} {transaction.time || "12:00"}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 relative">
                           <span className="font-medium">{transaction.store}</span>
                           {!transaction.description && !editingDescriptionIds.has(transaction.id) && (
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="h-5 w-5 p-0 text-blue-500 flex items-center justify-center rounded-full"
+                              className="h-5 w-5 p-0 text-blue-500 flex items-center justify-center rounded-full sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
                               onClick={() => toggleDescriptionEdit(transaction.id)}
                               title="Añadir descripción"
                             >
@@ -165,22 +205,13 @@ export function ViewTransactionsDialog({
                           )}
                         </div>
                         {transaction.description ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 relative">
                             <span className="text-xs text-gray-500">{transaction.description}</span>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-5 w-5 p-0 text-red-500 flex items-center justify-center rounded-full"
-                              onClick={() => handleDeleteDescription(transaction.id)}
-                              title="Eliminar descripción"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
                           </div>
                         ) : editingDescriptionIds.has(transaction.id) && (
                           <div className="flex items-center gap-2 mt-1">
                             <Input
-                              className="h-6 text-xs"
+                              className="h-6 text-xs bg-transparent border-transparent shadow-none sm:group-hover:bg-background sm:group-hover:border-input sm:group-hover:shadow-sm transition-all"
                               placeholder="Añadir descripción..."
                               defaultValue=""
                               // No necesitamos el onChange por ahora
@@ -201,7 +232,7 @@ export function ViewTransactionsDialog({
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="h-5 w-5 p-0 text-gray-400 flex items-center justify-center rounded-full"
+                              className="h-5 w-5 p-0 text-gray-400 flex items-center justify-center rounded-full sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
                               onClick={() => setEditingDescriptionIds(prev => {
                                 const newSet = new Set(prev);
                                 newSet.delete(transaction.id);
@@ -218,7 +249,7 @@ export function ViewTransactionsDialog({
                     <TableCell>{formatCurrency(transaction.amount)}</TableCell>
                     <TableCell>
                       {transaction.paymentMethod ? (
-                        <span className="text-sm font-medium">
+                        <span className={`text-sm font-medium ${getPaymentMethodColor(transaction.paymentMethod) || ''}`}>
                           {transaction.paymentMethod}
                         </span>
                       ) : (
