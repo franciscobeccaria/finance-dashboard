@@ -249,6 +249,7 @@ export default function Home() {
         onOpenChange={setViewDialogOpen}
         transactions={uiTransactions}
         onCategorize={handleCategorizeTransaction}
+        availableBudgets={budgets.map(budget => budget.name)}
       />
       
       <EditBudgetDialog

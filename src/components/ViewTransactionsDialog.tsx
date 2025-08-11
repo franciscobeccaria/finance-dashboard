@@ -39,25 +39,17 @@ interface ViewTransactionsDialogProps {
   onOpenChange: (open: boolean) => void;
   transactions: Transaction[];
   onCategorize?: (transactionId: string, category: string) => void;
+  availableBudgets: string[]; // Lista actualizada de presupuestos disponibles
 }
 
-// Predefined budget categories
-const predefinedCategories = [
-  "Supermercado", 
-  "Restaurantes", 
-  "Transporte", 
-  "Entretenimiento", 
-  "Servicios", 
-  "Salud", 
-  "Ropa", 
-  "Otros"
-];
+// Las categorías ahora se reciben como prop
 
 export function ViewTransactionsDialog({
   open,
   onOpenChange,
   transactions,
-  onCategorize = () => {}
+  onCategorize = () => {},
+  availableBudgets = []
 }: ViewTransactionsDialogProps) {
   const [categoryFilter, setCategoryFilter] = useState<string | null>("all");
   const [editingTransaction, setEditingTransaction] = useState<string | null>(null);
@@ -66,16 +58,16 @@ export function ViewTransactionsDialog({
   // Get unique categories for the filter
   const categories = useMemo(() => {
     const uniqueCategories = new Set<string>();
-    // Add all predefined categories
-    predefinedCategories.forEach(category => uniqueCategories.add(category));
-    // Add categories from transactions (if any are assigned)
+    // Add all available budgets from the main component
+    availableBudgets.forEach(category => uniqueCategories.add(category));
+    // Add categories from transactions (if any are assigned that aren't in availableBudgets)
     transactions.forEach(transaction => {
       if (transaction.budget) {
         uniqueCategories.add(transaction.budget);
       }
     });
     return Array.from(uniqueCategories);
-  }, [transactions]);
+  }, [transactions, availableBudgets]);
   
   // Filter transactions based on selected category
   const filteredTransactions = useMemo(() => {
@@ -137,7 +129,7 @@ export function ViewTransactionsDialog({
                               <SelectValue placeholder="Seleccionar categoría" />
                             </SelectTrigger>
                             <SelectContent>
-                              {predefinedCategories.map(category => (
+                              {availableBudgets.map(category => (
                                 <SelectItem key={category} value={category}>{category}</SelectItem>
                               ))}
                             </SelectContent>
