@@ -11,10 +11,13 @@ Una aplicación web moderna para el control y seguimiento de finanzas personales
 
 **Finance Dashboard** es una aplicación de gestión financiera personal que permite a los usuarios:
 
-- ✅ **Gestionar presupuestos por categoría**: Controlar gastos en diferentes categorías como Supermercado, Salidas, Delivery, Transporte, etc.
+- ✅ **Gestionar presupuestos por categoría**: Crear, editar y eliminar presupuestos personalizados según necesidades.
 - ✅ **Añadir transacciones**: Registrar gastos con información detallada incluyendo comercio, monto, fecha, hora y categoría.
+- ✅ **Categorización manual**: Asignar categorías a transacciones importadas desde fuentes externas.
 - ✅ **Visualizar progreso de presupuestos**: Ver en tiempo real el porcentaje gastado de cada presupuesto con indicadores visuales.
+- ✅ **Presupuesto total destacado**: Visualizar el estado general de todos los presupuestos combinados.
 - ✅ **Historial de transacciones**: Consultar todas las transacciones registradas con filtrado por categoría.
+- ✅ **Integración API**: Obtención de transacciones reales desde API de correo electrónico.
 - ✅ **Interfaz responsive**: Diseño adaptable para dispositivos móviles, tabletas y escritorio.
 
 ## 🏗️ Arquitectura y Tecnologías
@@ -33,6 +36,7 @@ Una aplicación web moderna para el control y seguimiento de finanzas personales
   - `@radix-ui/react-progress` - Barras de progreso
   - `@radix-ui/react-select` - Selectores dropdown
   - `@radix-ui/react-slot` - Composición de componentes
+  - `@radix-ui/react-label` - Etiquetas de formulario accesibles
 - **Lucide React** - Iconografía SVG moderna y consistente
 - **React Day Picker** - Selector de fechas avanzado
 - **date-fns** - Manipulación y formato de fechas
@@ -67,8 +71,10 @@ finance-dashboard/
 │   │   │   └── table.tsx       # Componentes de tabla (Table, TableRow, etc.)
 │   │   ├── AddTransactionDialog.tsx    # Modal para añadir transacciones
 │   │   ├── BudgetCard.tsx              # Tarjeta de presupuesto individual
+│   │   ├── EditBudgetDialog.tsx        # Modal para crear/editar/eliminar presupuestos
 │   │   ├── Header.tsx                  # Cabecera principal de la app
-│   │   └── ViewTransactionsDialog.tsx  # Modal para ver todas las transacciones
+│   │   ├── TotalBudgetCard.tsx         # Tarjeta de resumen total de presupuestos
+│   │   └── ViewTransactionsDialog.tsx  # Modal para ver y categorizar transacciones
 │   └── lib/
 │       └── utils.ts            # Utilidades compartidas (clsx + tailwind-merge)
 ├── public/                     # Archivos estáticos
@@ -79,6 +85,23 @@ finance-dashboard/
 ├── postcss.config.mjs         # Configuración de PostCSS
 ├── eslint.config.mjs          # Configuración de ESLint
 └── next.config.ts             # Configuración de Next.js
+
+## 📱 Servicios y API
+
+```
+finance-dashboard/
+├── src/
+│   ├── services/                # Servicios para comunicación con backend
+│   │   └── api.ts              # Cliente para endpoints de API y funciones auxiliares
+```
+
+### API de Transacciones
+
+La aplicación se integra con un backend que proporciona datos de transacciones reales a través del endpoint `/gmail/extract`. Este endpoint extrae información de correos electrónicos relacionados con compras y pagos utilizando criterios de búsqueda avanzados:
+
+- **Fuentes de correo**: "Informes Naranja X", "Aviso Santander", "Belo", "Mercado Libre"
+- **Asuntos relevantes**: "Ingresó una compra", "Pagaste", "Aviso de operación", etc.
+- **Rango de fechas**: Configurable para filtrar por período específico
 ```
 
 ## 🧩 Componentes y Funcionalidades
@@ -87,16 +110,48 @@ finance-dashboard/
 
 La página principal es el corazón de la aplicación y contiene:
 
-- **Estado de la aplicación**: Manejo de estado local con React hooks para controlar la apertura/cierre de modales
-- **Datos de muestra**: Presupuestos y transacciones de ejemplo para demostración
+- **Estado de la aplicación**: Manejo de estado con React hooks (useState, useEffect, useMemo)
+- **Integración API**: Llamadas asíncronas al backend para obtener transacciones reales
+- **Gestión de presupuestos**: Sistema para crear, editar y eliminar presupuestos personalizados
+- **Categorización de transacciones**: Funcionalidad para asignar categorías manualmente
 - **Layout responsivo**: Grid adaptativo que muestra 1-4 columnas según el tamaño de pantalla
-- **Integración de componentes**: Orchestación de Header, BudgetCards y Dialogs
+- **Estados de carga**: Indicadores visuales durante la carga de datos y manejo de errores
+- **Integración de componentes**: Orchestación de múltiples componentes y diálogos
 
-**Datos de ejemplo incluidos**:
-- 4 categorías de presupuesto: Supermercado ($400), Salidas ($300), Delivery ($150), Transporte ($120)
-- 5 transacciones de muestra con diferentes comercios y categorías
+**Presupuestos predefinidos**:
+- 8 categorías base: Supermercado, Restaurantes, Transporte, Entretenimiento, Servicios, Salud, Ropa, Otros
 
-### 2. **Header Component** - `src/components/Header.tsx`
+### 2. **Gestión de Presupuestos** - `src/components/EditBudgetDialog.tsx`
+
+Componente de diálogo para la gestión completa de presupuestos:
+
+- **Crear nuevos presupuestos**: Interfaz para añadir presupuestos personalizados
+- **Editar presupuestos existentes**: Modificar nombre y monto total de presupuestos
+- **Eliminar presupuestos**: Opción para eliminar presupuestos con limpieza de categorías asociadas
+- **Validación de datos**: Verificación de campos obligatorios y valores numéricos
+- **Estados de formulario**: Manejo de estados para diferentes modos (creación/edición)
+
+### 3. **Categorización de Transacciones** - `src/components/ViewTransactionsDialog.tsx`
+
+Componente mejorado para visualizar y categorizar transacciones:
+
+- **Visualización de transacciones**: Tabla con fecha, comercio, monto y categoría
+- **Filtrado por categoría**: Selector para filtrar transacciones según su categoría
+- **Edición inline de categorías**: Interfaz para asignar categorías a transacciones existentes
+- **Indicador visual**: Estilo distintivo para transacciones sin categorizar
+- **Estados de transición**: Animaciones y estados de UI para la experiencia de categorización
+
+### 4. **Presupuesto Total** - `src/components/TotalBudgetCard.tsx`
+
+Componente destacado que muestra el estado general de todos los presupuestos:
+
+- **Diseño prominente**: Estilizado con gradientes, bordes y tipografía destacada
+- **Cálculo automático**: Suma de todos los montos de presupuestos y gastos
+- **Indicadores visuales**: Barra de progreso con colores según nivel de utilización
+- **Mensajes contextuales**: Textos informativos basados en el porcentaje de uso
+- **Formato de moneda**: Visualización de importes con formato monetario adecuado
+
+### 5. **Header Component** - `src/components/Header.tsx`
 
 Cabecera principal de la aplicación que incluye:
 
