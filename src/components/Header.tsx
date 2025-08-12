@@ -6,6 +6,7 @@ import {
   DropdownMenuContent, 
   DropdownMenuItem 
 } from "@/components/ui/dropdown-menu";
+import { LoginButton } from "./LoginButton";
 
 interface HeaderProps {
   onAddTransaction: () => void;
@@ -57,14 +58,17 @@ export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, i
             </DropdownMenuContent>
           </DropdownMenu>
           
-          <Button variant="outline" size="icon" disabled={isLoading}>
+          {/* TODO: Temporalmente comentado el botón Settings */}
+          {/* <Button variant="outline" size="icon" disabled={isLoading}>
             {isLoading ? (
               <div className="h-5 w-5 border-2 border-t-transparent border-blue-800 rounded-full animate-spin" />
             ) : (
               <Settings className="h-5 w-5 text-blue-800" />
             )}
             <span className="sr-only">Settings</span>
-          </Button>
+          </Button> */}
+          
+          <LoginButton />
         </div>
       </div>
     </header>

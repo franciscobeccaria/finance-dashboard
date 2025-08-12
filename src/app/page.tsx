@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { Header } from "@/components/Header";
 import { BudgetCard } from "@/components/BudgetCard";
 import { BudgetCardSkeleton } from "@/components/BudgetCardSkeleton";
@@ -10,7 +11,8 @@ import { EditBudgetDialog, Budget as BudgetType } from "@/components/EditBudgetD
 import { Edit } from "lucide-react";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { ViewTransactionsDialog } from "@/components/ViewTransactionsDialog";
-import { fetchTransactions, ParsedTransaction } from "@/services/api";
+import { fetchTransactions, ParsedTransaction, initializeUserBudgets, saveUserBudgets } from "@/services/api";
+import { LoginButton } from "@/components/LoginButton";
 
 // We're now using BudgetType from EditBudgetDialog.tsx
 
@@ -34,19 +36,11 @@ const MOVIMIENTOS_CATEGORY = {
   isSpecial: true, // Flag para identificarla como categoría especial
 };
 
-// Define our predefined budget categories
-const predefinedBudgets = [
-  { id: "1", name: "Supermercado", spent: 0, total: 500, isSpecial: false },
-  { id: "2", name: "Restaurantes", spent: 0, total: 300, isSpecial: false },
-  { id: "3", name: "Transporte", spent: 0, total: 200, isSpecial: false },
-  { id: "4", name: "Entretenimiento", spent: 0, total: 250, isSpecial: false },
-  { id: "5", name: "Servicios", spent: 0, total: 400, isSpecial: false },
-  { id: "6", name: "Salud", spent: 0, total: 350, isSpecial: false },
-  { id: "7", name: "Ropa", spent: 0, total: 200, isSpecial: false },
-  { id: "8", name: "Otros", spent: 0, total: 150, isSpecial: false }
-];
+// Budget categories are now loaded from user initialization
 
 export default function Home() {
+  const { data: session, status } = useSession();
+  
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editBudgetDialogOpen, setEditBudgetDialogOpen] = useState(false);
@@ -60,8 +54,8 @@ export default function Home() {
   // State for categorized transactions and budget calculation
   const [uiTransactions, setUiTransactions] = useState<UITransaction[]>([]);
   
-  // State for budgets (initialized with predefined ones)
-  const [budgets, setBudgets] = useState<BudgetType[]>(predefinedBudgets);
+  // State for budgets (will be initialized when user is authenticated)
+  const [budgets, setBudgets] = useState<BudgetType[]>([]);
   
   // Siempre asegurémonos de tener la categoría especial "Movimientos" disponible para transacciones
   // pero no se muestra como presupuesto
@@ -145,16 +139,26 @@ export default function Home() {
     
     if (currentEditBudget) {
       // Editing existing budget
-      setBudgets(prev => 
-        prev.map(b => 
-          b.id === budget.id 
-            ? { ...budget, spent: b.spent, isSpecial: false } 
-            : b
-        )
+      const updatedBudgets = budgets.map(b => 
+        b.id === budget.id 
+          ? { ...budget, spent: b.spent, isSpecial: false } 
+          : b
       );
+      setBudgets(updatedBudgets);
+      
+      // Save to localStorage
+      if (session?.user?.email) {
+        saveUserBudgets(session.user.email, updatedBudgets);
+      }
     } else {
       // Adding new budget
-      setBudgets(prev => [...prev, { ...budget, spent: 0, isSpecial: false }]);
+      const updatedBudgets = [...budgets, { ...budget, spent: 0, isSpecial: false }];
+      setBudgets(updatedBudgets);
+      
+      // Save to localStorage
+      if (session?.user?.email) {
+        saveUserBudgets(session.user.email, updatedBudgets);
+      }
     }
   };
   
@@ -166,7 +170,13 @@ export default function Home() {
     }
     
     // Remove the budget
-    setBudgets(prev => prev.filter(b => b.id !== budgetId));
+    const updatedBudgets = budgets.filter(b => b.id !== budgetId);
+    setBudgets(updatedBudgets);
+    
+    // Save to localStorage
+    if (session?.user?.email) {
+      saveUserBudgets(session.user.email, updatedBudgets);
+    }
     
     // Remove the category from any transactions using this budget
     setUiTransactions(prev => 
@@ -205,7 +215,8 @@ export default function Home() {
   }, [transactions]);
 
   // Fetch transactions from API
-  useEffect(() => {
+  // TODO: Temporarily commented out - will be re-enabled after auth implementation
+  /* useEffect(() => {
     const getTransactions = async () => {
       setIsLoading(true);
       setError(null);
@@ -226,7 +237,73 @@ export default function Home() {
     };
 
     getTransactions();
-  }, []);
+  }, []); */
+  
+  // Initialize user data and fetch transactions when authenticated
+  useEffect(() => {
+    const initializeUserData = async () => {
+      if (status === "loading") return; // Wait for session to load
+      
+      if (!session?.user?.email) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Initialize user budgets (first time vs returning user)
+        const userBudgets = initializeUserBudgets(session.user.email);
+        setBudgets(userBudgets);
+        
+        // Fetch transactions if we have access token
+        if (session.accessToken) {
+          const data = await fetchTransactions(session.accessToken);
+          setTransactions(data);
+          console.log('Transactions loaded:', data.length);
+          if (data.length > 0) {
+            console.log('Sample transaction:', data[0]);
+          }
+        }
+      } catch (err: unknown) {
+        console.error('Error initializing user data:', err);
+        setError(err instanceof Error ? err.message : 'Error desconocido');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeUserData();
+  }, [session, status]);
+
+  // Show loading screen while checking authentication
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 border-4 border-t-transparent border-blue-800 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login screen if not authenticated
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-8">
+          <h1 className="text-4xl font-bold text-blue-800 mb-4">Presus.</h1>
+          <p className="text-gray-600 mb-8">
+            Gestiona tus presupuestos y transacciones de forma inteligente.
+            Inicia sesión con Google para comenzar.
+          </p>
+          <LoginButton />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
