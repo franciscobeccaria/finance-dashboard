@@ -19,30 +19,74 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 
+interface Budget {
+  id: string;
+  name: string;
+  total: number;
+  spent?: number;
+  isSpecial?: boolean;
+}
+
 interface AddTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  budgets: Budget[];
+  onSave: (transaction: {
+    merchant: string;
+    amount: number;
+    budgetId: string;
+    date: Date;
+    time: string;
+  }) => Promise<void>;
 }
 
 export function AddTransactionDialog({
   open,
   onOpenChange,
+  budgets,
+  onSave,
 }: AddTransactionDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
   const [time, setTime] = useState("12:00");
+  const [merchant, setMerchant] = useState("");
+  const [amount, setAmount] = useState("");
+  const [selectedBudgetId, setSelectedBudgetId] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const budgetOptions = [
-    { value: "supermercado", label: "Supermercado" },
-    { value: "salidas", label: "Salidas" },
-    { value: "delivery", label: "Delivery" },
-    { value: "transporte", label: "Transporte" },
-    { value: "servicios", label: "Servicios" },
-  ];
+  // Filter out special budgets (like "Movimientos")
+  const availableBudgets = budgets.filter(budget => !budget.isSpecial);
 
-  const handleSave = () => {
-    // In a real app, you would save the transaction here
-    onOpenChange(false);
+  const handleSave = async () => {
+    if (!merchant || !amount || !selectedBudgetId || !date) {
+      alert("Por favor completa todos los campos");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await onSave({
+        merchant,
+        amount: parseFloat(amount),
+        budgetId: selectedBudgetId,
+        date,
+        time,
+      });
+      
+      // Reset form
+      setMerchant("");
+      setAmount("");
+      setSelectedBudgetId("");
+      setDate(new Date());
+      setTime("12:00");
+      
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error saving transaction:', error);
+      alert("Error al guardar la transacción");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -60,6 +104,8 @@ export function AddTransactionDialog({
               id="comercio"
               placeholder="Nombre del comercio"
               className="col-span-3"
+              value={merchant}
+              onChange={(e) => setMerchant(e.target.value)}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -72,6 +118,8 @@ export function AddTransactionDialog({
               step="0.01"
               placeholder="0"
               className="col-span-3"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -79,14 +127,14 @@ export function AddTransactionDialog({
               Presupuesto
             </label>
             <div className="col-span-3">
-              <Select>
+              <Select value={selectedBudgetId} onValueChange={setSelectedBudgetId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar presupuesto" />
                 </SelectTrigger>
                 <SelectContent>
-                  {budgetOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                  {availableBudgets.map((budget) => (
+                    <SelectItem key={budget.id} value={budget.id}>
+                      {budget.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -145,8 +193,8 @@ export function AddTransactionDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button type="submit" onClick={handleSave}>
-            Guardar
+          <Button type="submit" onClick={handleSave} disabled={isLoading}>
+            {isLoading ? "Guardando..." : "Guardar"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -11,6 +11,31 @@ export interface ParsedTransaction {
   source: string;
 }
 
+// Interface for budget data from backend (without spent - calculated in frontend)
+export interface BudgetWithSpent {
+  id: string;
+  name: string;
+  total: number;
+  spent?: number; // Optional since it's calculated in frontend
+  isSpecial?: boolean;
+}
+
+// Interface for transaction data from backend
+export interface BackendTransaction {
+  id: string;
+  messageId: string;
+  date: string;
+  merchant: string;
+  amount: number;
+  currency: string;
+  type: 'expense' | 'income';
+  source: string;
+  budgetId?: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Backend URL configuration
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
@@ -28,7 +53,35 @@ export const DEFAULT_BUDGETS = [
 ];
 
 /**
- * Fetch transactions from the API using authenticated session
+ * Fetch all transactions from backend (consolidated endpoint)
+ * @param accessToken - Google access token from session
+ * @returns Promise with an array of transactions
+ */
+export async function fetchAllTransactions(accessToken: string): Promise<BackendTransaction[]> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/transactions/all`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+
+    const data = await response.json();
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching all transactions:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch transactions from Gmail and store in backend (original endpoint)
  * @param accessToken - Google access token from session
  * @returns Promise with an array of transactions
  */
@@ -96,6 +149,185 @@ export function calculateBudgets(transactions: ParsedTransaction[]) {
   return budgets;
 }
 
+/**
+ * Fetch budgets from backend (without spent calculation)
+ * @param accessToken - Google access token from session
+ * @returns Promise with an array of budgets
+ */
+export async function fetchBudgets(accessToken: string): Promise<BudgetWithSpent[]> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/budgets`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+
+    const data = await response.json();
+    
+    // Transform backend response to frontend format
+    const transformedData = data.map((budget: any) => ({
+      id: budget.id,
+      name: budget.name,
+      total: parseFloat(budget.total_amount || budget.total || 0), // Handle both formats
+      isSpecial: budget.is_special || budget.isSpecial || false,
+      spent: budget.spent || 0
+    }));
+    
+    console.log('🔄 Transformed budget data:', transformedData);
+    return transformedData;
+  } catch (error) {
+    console.error('Error fetching budgets:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a new budget
+ * @param accessToken - Google access token from session
+ * @param budget - Budget data to create
+ * @returns Promise with the created budget
+ */
+export async function createBudget(accessToken: string, budget: { name: string; total_amount: number; is_special?: boolean }): Promise<BudgetWithSpent> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/budgets`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(budget)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+
+    const data = await response.json();
+    
+    // Transform backend response to frontend format
+    return {
+      id: data.id,
+      name: data.name,
+      total: parseFloat(data.total_amount || data.total || 0),
+      isSpecial: data.is_special || data.isSpecial || false,
+      spent: data.spent || 0
+    };
+  } catch (error) {
+    console.error('Error creating budget:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update an existing budget
+ * @param accessToken - Google access token from session
+ * @param budgetId - ID of the budget to update
+ * @param budget - Updated budget data
+ * @returns Promise with the updated budget
+ */
+export async function updateBudget(accessToken: string, budgetId: string, budget: { name: string; total_amount: number; is_special?: boolean }): Promise<BudgetWithSpent> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/budgets/${budgetId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(budget)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+
+    const data = await response.json();
+    
+    // Transform backend response to frontend format
+    return {
+      id: data.id,
+      name: data.name,
+      total: parseFloat(data.total_amount || data.total || 0),
+      isSpecial: data.is_special || data.isSpecial || false,
+      spent: data.spent || 0
+    };
+  } catch (error) {
+    console.error('Error updating budget:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a budget
+ * @param accessToken - Google access token from session
+ * @param budgetId - ID of the budget to delete
+ */
+export async function deleteBudget(accessToken: string, budgetId: string): Promise<void> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/budgets/${budgetId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+  } catch (error) {
+    console.error('Error deleting budget:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update transaction budget assignment
+ * @param accessToken - Google access token from session
+ * @param transactionId - ID of the transaction to update
+ * @param budgetId - ID of the budget to assign (or null to unassign)
+ * @param description - Optional custom description
+ */
+export async function updateTransactionBudget(
+  accessToken: string, 
+  transactionId: string, 
+  budgetId: string | null, 
+  description?: string
+): Promise<BackendTransaction> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/transactions/${transactionId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        budgetId,
+        ...(description !== undefined && { description })
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating transaction budget:', error);
+    throw error;
+  }
+}
+
+// Legacy functions for localStorage (will be removed after migration)
 /**
  * Initialize user data when logging in for the first time
  * This will be replaced by a backend endpoint in the future

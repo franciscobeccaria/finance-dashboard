@@ -11,7 +11,7 @@ import { EditBudgetDialog, Budget as BudgetType } from "@/components/EditBudgetD
 import { Edit } from "lucide-react";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { ViewTransactionsDialog } from "@/components/ViewTransactionsDialog";
-import { fetchTransactions, ParsedTransaction, initializeUserBudgets, saveUserBudgets } from "@/services/api";
+import { fetchAllTransactions, BackendTransaction, fetchBudgets, BudgetWithSpent, createBudget, updateBudget, deleteBudget, updateTransactionBudget } from "@/services/api";
 import { LoginButton } from "@/components/LoginButton";
 
 // We're now using BudgetType from EditBudgetDialog.tsx
@@ -47,33 +47,45 @@ export default function Home() {
   const [currentEditBudget, setCurrentEditBudget] = useState<BudgetType | undefined>(undefined);
   
   // State for API data
-  const [transactions, setTransactions] = useState<ParsedTransaction[]>([]);
+  const [transactions, setTransactions] = useState<BackendTransaction[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   // State for categorized transactions and budget calculation
   const [uiTransactions, setUiTransactions] = useState<UITransaction[]>([]);
   
-  // State for budgets (will be initialized when user is authenticated)
-  const [budgets, setBudgets] = useState<BudgetType[]>([]);
+  // State for budgets (loaded from backend)
+  const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   
   // Siempre asegurémonos de tener la categoría especial "Movimientos" disponible para transacciones
   // pero no se muestra como presupuesto
   const allCategories = useMemo<BudgetType[]>(() => {
+    // Convert BudgetWithSpent to BudgetType and add movimientos category
+    const budgetTypes: BudgetType[] = budgets.map(b => ({
+      id: b.id,
+      name: b.name,
+      spent: b.spent,
+      total: b.total,
+      isSpecial: b.isSpecial || false
+    }));
+    
     // Verificar si ya está incluida en los presupuestos (no debería, pero por seguridad)
-    const movimientosExists = budgets.some(b => b.id === MOVIMIENTOS_CATEGORY.id);
+    const movimientosExists = budgetTypes.some(b => b.id === MOVIMIENTOS_CATEGORY.id);
     if (!movimientosExists) {
-      return [...budgets, {...MOVIMIENTOS_CATEGORY, spent: 0, total: 0}];
+      return [...budgetTypes, {...MOVIMIENTOS_CATEGORY, spent: 0, total: 0}];
     }
-    return budgets;
+    return budgetTypes;
   }, [budgets]);
   
   // Calculate spent amounts for each budget based on categorized transactions
   const budgetsWithSpent = useMemo<BudgetType[]>(() => {
     // Start with current budgets (with zero spent)
     const workingBudgets = budgets.map(budget => ({
-      ...budget,
-      spent: 0
+      id: budget.id,
+      name: budget.name,
+      spent: 0,
+      total: budget.total,
+      isSpecial: budget.isSpecial || false
     }));
     
     // Update spent amounts based on categorized transactions
@@ -95,22 +107,42 @@ export default function Home() {
   }, [budgetsWithSpent]);
 
   // Handle transaction categorization and description updates
-  const handleCategorizeTransaction = (transactionId: string, budgetId: string, budgetName: string, description?: string) => {
-    setUiTransactions(prev => 
-      prev.map(transaction => 
-        transaction.id === transactionId 
-          ? { 
-              ...transaction, 
-              budget: budgetName, 
-              budgetId: budgetId,
-              // Si description es undefined, eliminamos la propiedad
-              // Si tiene un valor, lo actualizamos
-              // Si no se proporciona (parámetro omitido), mantenemos el valor actual
-              ...(description !== undefined ? { description } : {})
-            } 
-          : transaction
-      )
-    );
+  const handleCategorizeTransaction = async (transactionId: string, budgetId: string, budgetName: string, description?: string) => {
+    if (!session?.accessToken) return;
+    
+    try {
+      // Update transaction in backend
+      await updateTransactionBudget(
+        session.accessToken,
+        transactionId,
+        budgetId === '' ? null : budgetId,
+        description
+      );
+      
+      // Update local state
+      setUiTransactions(prev => 
+        prev.map(transaction => 
+          transaction.id === transactionId 
+            ? { 
+                ...transaction, 
+                budget: budgetName, 
+                budgetId: budgetId,
+                // Si description es undefined, eliminamos la propiedad
+                // Si tiene un valor, lo actualizamos
+                // Si no se proporciona (parámetro omitido), mantenemos el valor actual
+                ...(description !== undefined ? { description } : {})
+              } 
+            : transaction
+        )
+      );
+      
+      // Refresh budgets to get updated spent amounts
+      const updatedBudgets = await fetchBudgets(session.accessToken);
+      setBudgets(updatedBudgets);
+    } catch (error) {
+      console.error('Error updating transaction budget:', error);
+      setError(error instanceof Error ? error.message : 'Error updating transaction');
+    }
   };
   
   // Handle opening the edit budget dialog
@@ -131,61 +163,107 @@ export default function Home() {
   };
   
   // Handle saving a budget (new or edited)
-  const handleSaveBudget = (budget: Omit<BudgetType, "spent">) => {
+  const handleSaveBudget = async (budget: Omit<BudgetType, "spent">) => {
     // Prevenir edición o creación de presupuestos con el ID de movimientos
     if (budget.id === MOVIMIENTOS_CATEGORY.id) {
       return;
     }
     
-    if (currentEditBudget) {
-      // Editing existing budget
-      const updatedBudgets = budgets.map(b => 
-        b.id === budget.id 
-          ? { ...budget, spent: b.spent, isSpecial: false } 
-          : b
-      );
-      setBudgets(updatedBudgets);
-      
-      // Save to localStorage
-      if (session?.user?.email) {
-        saveUserBudgets(session.user.email, updatedBudgets);
+    if (!session?.accessToken) return;
+    
+    try {
+      if (currentEditBudget) {
+        // Editing existing budget
+        await updateBudget(session.accessToken, budget.id, {
+          name: budget.name,
+          total_amount: budget.total
+        });
+      } else {
+        // Adding new budget
+        await createBudget(session.accessToken, {
+          name: budget.name,
+          total_amount: budget.total
+        });
       }
-    } else {
-      // Adding new budget
-      const updatedBudgets = [...budgets, { ...budget, spent: 0, isSpecial: false }];
-      setBudgets(updatedBudgets);
       
-      // Save to localStorage
-      if (session?.user?.email) {
-        saveUserBudgets(session.user.email, updatedBudgets);
-      }
+      // Refresh budgets from backend
+      const updatedBudgets = await fetchBudgets(session.accessToken);
+      setBudgets(updatedBudgets);
+    } catch (error) {
+      console.error('Error saving budget:', error);
+      setError(error instanceof Error ? error.message : 'Error saving budget');
     }
   };
   
   // Handle deleting a budget
-  const handleDeleteBudget = (budgetId: string) => {
+  const handleDeleteBudget = async (budgetId: string) => {
     // No permitir eliminar la categoría especial de Movimientos
     if (budgetId === MOVIMIENTOS_CATEGORY.id) {
       return;
     }
     
-    // Remove the budget
-    const updatedBudgets = budgets.filter(b => b.id !== budgetId);
-    setBudgets(updatedBudgets);
+    if (!session?.accessToken) return;
     
-    // Save to localStorage
-    if (session?.user?.email) {
-      saveUserBudgets(session.user.email, updatedBudgets);
+    try {
+      // Delete budget from backend
+      await deleteBudget(session.accessToken, budgetId);
+      
+      // Refresh budgets from backend
+      const updatedBudgets = await fetchBudgets(session.accessToken);
+      setBudgets(updatedBudgets);
+      
+      // Remove the category from any transactions using this budget
+      setUiTransactions(prev => 
+        prev.map(transaction => 
+          transaction.budgetId === budgetId 
+            ? { ...transaction, budget: '', budgetId: '' } 
+            : transaction
+        )
+      );
+    } catch (error) {
+      console.error('Error deleting budget:', error);
+      setError(error instanceof Error ? error.message : 'Error deleting budget');
     }
-    
-    // Remove the category from any transactions using this budget
-    setUiTransactions(prev => 
-      prev.map(transaction => 
-        transaction.budgetId === budgetId 
-          ? { ...transaction, budget: '', budgetId: '' } 
-          : transaction
-      )
-    );
+  };
+
+  // Handle creating a new transaction
+  const handleCreateTransaction = async (transaction: {
+    merchant: string;
+    amount: number;
+    budgetId: string;
+    date: Date;
+    time: string;
+  }) => {
+    if (!session?.accessToken) return;
+
+    try {
+      // TODO: Implement backend endpoint for creating transactions
+      console.log('🔄 Creating transaction:', transaction);
+      
+      // For now, just add to local state (will be replaced with API call)
+      const newTransaction = {
+        id: `temp-${Date.now()}`, // Temporary ID
+        date: transaction.date,
+        store: transaction.merchant,
+        amount: transaction.amount,
+        budget: budgets.find(b => b.id === transaction.budgetId)?.name || '',
+        budgetId: transaction.budgetId,
+        time: transaction.time,
+        paymentMethod: 'Manual',
+        description: 'Transacción manual'
+      };
+      
+      setUiTransactions(prev => [newTransaction, ...prev]);
+      
+      // TODO: When backend is ready, use:
+      // await createTransaction(session.accessToken, transaction);
+      // const updatedTransactions = await fetchAllTransactions(session.accessToken);
+      // setTransactions(updatedTransactions);
+      
+    } catch (error) {
+      console.error('Error creating transaction:', error);
+      throw error;
+    }
   };
   
   // Transform API transactions to UI format when API data changes
@@ -198,21 +276,31 @@ export default function Home() {
           const hours = date.getHours().toString().padStart(2, '0');
           const minutes = date.getMinutes().toString().padStart(2, '0');
           
+          // Find budget name from budgetId if assigned
+          let budgetName = '';
+          if (transaction.budgetId) {
+            const assignedBudget = budgets.find(b => b.id === transaction.budgetId);
+            if (assignedBudget) {
+              budgetName = assignedBudget.name;
+            }
+          }
+          
           return {
-            id: transaction.messageId,
+            id: transaction.id, // Use backend ID instead of messageId
             date: date,
             store: transaction.merchant,
             amount: transaction.amount,
-            budget: '', // No category name assigned initially
-            budgetId: '', // No category ID assigned initially
+            budget: budgetName,
+            budgetId: transaction.budgetId || '',
             time: `${hours}:${minutes}`,
-            paymentMethod: transaction.source // Mapeando source como medio de pago
+            paymentMethod: transaction.source,
+            description: transaction.description
           };
         });
       
       setUiTransactions(transformedTransactions);
     }
-  }, [transactions]);
+  }, [transactions, budgets]);
 
   // Fetch transactions from API
   // TODO: Temporarily commented out - will be re-enabled after auth implementation
@@ -244,7 +332,7 @@ export default function Home() {
     const initializeUserData = async () => {
       if (status === "loading") return; // Wait for session to load
       
-      if (!session?.user?.email) {
+      if (!session?.user?.email || !session.accessToken) {
         setIsLoading(false);
         return;
       }
@@ -253,22 +341,29 @@ export default function Home() {
       setError(null);
       
       try {
-        // Initialize user budgets (first time vs returning user)
-        const userBudgets = initializeUserBudgets(session.user.email);
-        setBudgets(userBudgets);
+        console.log('🔑 Testing authentication with Google token...');
         
-        // Fetch transactions if we have access token
-        if (session.accessToken) {
-          const data = await fetchTransactions(session.accessToken);
-          setTransactions(data);
-          console.log('Transactions loaded:', data.length);
-          if (data.length > 0) {
-            console.log('Sample transaction:', data[0]);
-          }
+        // Test budgets first (should work)
+        const budgetData = await fetchBudgets(session.accessToken);
+        setBudgets(budgetData);
+        console.log('✅ Budgets loaded:', budgetData.length);
+        
+        // Test transactions (might not work yet)
+        try {
+          const transactionData = await fetchAllTransactions(session.accessToken);
+          setTransactions(transactionData);
+          console.log('✅ Transactions loaded:', transactionData.length);
+        } catch (transErr) {
+          console.log('⚠️ Transactions endpoint not ready:', transErr);
+          setTransactions([]); // Set empty array to continue
+        }
+        
+        if (budgetData.length > 0) {
+          console.log('📊 Sample budget:', budgetData[0]);
         }
       } catch (err: unknown) {
-        console.error('Error initializing user data:', err);
-        setError(err instanceof Error ? err.message : 'Error desconocido');
+        console.error('❌ Error initializing user data:', err);
+        setError(err instanceof Error ? err.message : 'Error loading data from backend');
       } finally {
         setIsLoading(false);
       }
@@ -383,7 +478,9 @@ export default function Home() {
       {/* Dialogs */}
       <AddTransactionDialog 
         open={addDialogOpen} 
-        onOpenChange={setAddDialogOpen} 
+        onOpenChange={setAddDialogOpen}
+        budgets={budgets}
+        onSave={handleCreateTransaction}
       />
       <ViewTransactionsDialog
         open={viewDialogOpen}
