@@ -447,6 +447,70 @@ Configuración basada en:
 - **Validación de formularios**: No hay validación del lado del cliente
 - **Manejo de errores**: Falta manejo de errores y estados de loading
 
+---
+
+# 📋 Roadmap y Backlog del Proyecto
+
+## MVP v1.0: Lanzamiento Inicial
+*El objetivo de esta versión es tener la aplicación funcional, segura y desplegada en un entorno de producción para tu uso personal, mostrando únicamente los datos del mes en curso.*
+
+### 🎯 Prioridades Críticas (Bloqueantes del Despliegue)
+- [ ] **PFIN-001: Configurar Base de Datos de Producción** - Crear la instancia de PostgreSQL en la nube (ej. Supabase, Neon) y obtener las credenciales de conexión.
+- [ ] **PFIN-002: Crear Política de Privacidad** - Generar una página simple con la política de privacidad de la app, necesaria para la configuración de Google Cloud.
+- [ ] **PFIN-003: Configurar Pantalla de Consentimiento de Google** - Añadir el nombre de la aplicación, logo (opcional), y el enlace a la política de privacidad en la Google Cloud Console.
+- [ ] **PFIN-004: Actualizar URIs de Redirección en Google Console** - Añadir la URL de callback de tu frontend ya desplegado (ej. `https://<tu-app>.vercel.app/api/auth/callback/google`) a la lista de URIs autorizados.
+- [ ] **PFIN-005: Configurar Variables de Entorno de Producción** - Crear y configurar los archivos `.env.production` o la configuración de entorno en Vercel para ambos proyectos con todas las credenciales de producción (DB, Google, JWT, etc.).
+
+### 🚀 Tareas de Despliegue
+- [ ] **PFIN-006: Desplegar Backend a Producción** - Publicar la aplicación NestJS en Vercel, asegurando que las variables de entorno estén correctamente configuradas.
+- [ ] **PFIN-007: Desplegar Frontend a Producción** - Publicar la aplicación Next.js en Vercel, asegurando que apunte a la URL del backend desplegado.
+
+### ✅ Tareas de Validación Post-Lanzamiento
+- [ ] **PFIN-008: Ejecutar Pruebas E2E Manuales** - Realizar un test completo del flujo en el entorno de producción: Login -> Sincronizar -> Crear/Editar Presupuesto -> Asignar Categoría.
+- [ ] **PFIN-009: Monitorear Logs Iniciales** - Revisar activamente los logs de Vercel durante las primeras horas/días en busca de errores inesperados.
+
+---
+
+## Post-MVP v1.5: Primeras Mejoras de Valor
+*Una vez que el MVP esté estable, el foco se mueve a mejorar la experiencia y la calidad de los datos.*
+
+- [ ] **PFIN-010: Implementar Historial y Navegación de Fechas** - `[FRONTEND/BACKEND]` Permitir al usuario ver y navegar entre diferentes meses y años.
+  - **Frontend:** Añadir un componente selector de mes/año en el dashboard. Modificar las llamadas a la API para que usen la fecha seleccionada en lugar de una fija.
+  - **Backend:** Asegurar que los endpoints de `transactions` y `budgets` filtren eficientemente por el rango de fechas proporcionado.
+
+- [ ] **PFIN-011: Implementar Parser de Mercado Libre** - `[BACKEND]` Añadir el parser para la fuente de datos más importante que falta, probablemente requiriendo obtener el cuerpo completo del correo.
+- [ ] **PFIN-012: Implementar Gestión de Estado Global** - `[FRONTEND]` Integrar una librería como Zustand o React Context para manejar de forma más robusta el estado global.
+- [ ] **PFIN-013: Implementar Validación de Formularios** - `[FRONTEND]` Añadir validación del lado del cliente a los modales (ej. con Zod + React Hook Form) para una mejor UX.
+- [ ] **PFIN-014: Implementar Notificaciones (Toasts)** - `[FRONTEND]` Añadir feedback visual para el usuario tras acciones exitosas o fallidas (ej. "Presupuesto guardado").
+- [ ] **PFIN-015: Implementar Rate Limiting** - `[BACKEND]` Añadir un límite de peticiones a la API para prevenir abusos y controlar costos.
+- [ ] **PFIN-016: Limpiar Código Legacy del Frontend** - `[FRONTEND]` [CHORE] Refactorizar la aplicación para eliminar completamente cualquier uso de `localStorage` o datos de muestra hardcodeados.
+
+---
+
+## Futuro (v2.0+): Expansión de Funcionalidades
+*Características más grandes que expanden significativamente las capacidades de la aplicación.*
+
+- [ ] **PFIN-017: Implementar Gráficos y Analytics** - `[FRONTEND]` Añadir una sección de reportes con gráficos básicos (ej. gastos por categoría).
+- [ ] **PFIN-018: Implementar Jobs en Segundo Plano** - `[BACKEND]` Mover la sincronización con Gmail a un proceso en segundo plano para que el usuario no tenga que esperar en la UI.
+- [ ] **PFIN-019: Soporte para Más Bancos** - `[BACKEND]` Añadir parsers para otras entidades financieras (ej. BBVA, Macro).
+- [ ] **PFIN-020: Limpieza Avanzada de `merchant`** - `[BACKEND]` Crear un sistema para estandarizar nombres de comercios (ej. "DLO*Rappi" y "RAPPI" deben ser "Rappi").
+- [ ] **PFIN-021: Exportar Datos a CSV** - `[BACKEND/FRONTEND]` Crear un endpoint y un botón en la UI para permitir la descarga del historial de transacciones.
+- [ ] **PFIN-022: Implementar Tema Oscuro (Dark Mode)** - `[FRONTEND]` Añadir la capacidad de cambiar entre tema claro y oscuro.
+
+---
+
+## Backlog Técnico (Tareas de Madurez)
+*Mejoras continuas que no son features visibles pero aumentan la calidad y mantenibilidad del sistema.*
+
+- [ ] **PFIN-201: Implementar Sistema de Caché** - `[BACKEND]` Añadir una capa de caché (ej. con Redis) para acelerar las respuestas de la API.
+- [ ] **PFIN-202: Implementar Logging Estructurado** - `[BACKEND]` Configurar un sistema de logging más robusto para facilitar la depuración en producción.
+- [ ] **PFIN-203: Añadir Health Checks** - `[BACKEND]` Crear un endpoint `/health` que verifique la conexión a la base de datos y otros servicios.
+- [ ] **PFIN-204: Implementar Sistema de Migraciones Formal** - `[BACKEND]` Pasar de `auto-sync` de TypeORM a un sistema de migraciones manuales para un control total sobre el esquema de la base de datos.
+- [ ] **PFIN-205: Implementar Audit Logging** - `[BACKEND]` Crear un registro de auditoría para acciones sensibles (ej. cambios en presupuestos, eliminación de transacciones).
+- [ ] **PFIN-206: Mover Google App a Producción** - `[INFRAESTRUCTURA]` Pasar la aplicación en la Google Console de "Pruebas" a "Producción" para eliminar el límite de 100 usuarios y el banner de "app no verificada".
+
+---
+
 ## 🤝 Contribución
 
 ### Convenciones de Código
