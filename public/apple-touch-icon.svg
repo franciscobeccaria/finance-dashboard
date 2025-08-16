@@ -1,0 +1,12 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with padding for iOS -->
+  <rect x="10" y="10" width="160" height="160" rx="24" fill="#1e40af"/>
+  
+  <!-- Letter P -->
+  <path d="M46 42h44c15.46 0 28 12.54 28 28v0c0 15.46-12.54 28-28 28H74v60H46V42z" fill="white"/>
+  <path d="M74 70v28h16c7.73 0 14-6.27 14-14v0c0-7.73-6.27-14-14-14H74z" fill="#1e40af"/>
+  
+  <!-- Dollar sign accent -->
+  <circle cx="132" cy="132" r="16" fill="white"/>
+  <path d="M129 123h6v18h-6v-18z M135 123h-6c-1.66 0-3 1.34-3 3s1.34 3 3 3h6c1.66 0 3-1.34 3-3s-1.34-3-3-3z M129 135h6c1.66 0 3 1.34 3 3s-1.34 3-3 3h-6c-1.66 0-3-1.34-3-3s1.34-3 3-3z M129 141h6v6h-6v-6z" fill="#1e40af"/>
+</svg>

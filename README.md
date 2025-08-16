@@ -382,6 +382,24 @@ Configuración basada en:
 - [ ] **Autenticación** - Login y registro de usuarios
 - [ ] **Tema oscuro** - Toggle para modo dark/light
 
+### 🎨 Tareas Pendientes de Assets
+
+#### Iconos y Recursos Visuales
+- [ ] **Favicon.ico**: Reemplazar `src/app/favicon.ico` con archivo ICO real usando `public/favicon.svg` como base
+- [ ] **Iconos PWA**: Convertir los siguientes SVGs a PNG con las dimensiones correctas:
+  - `public/icon-192.svg` → `public/icon-192.png` (192x192px)
+  - `public/icon-512.svg` → `public/icon-512.png` (512x512px)  
+  - `public/apple-touch-icon.svg` → `public/apple-touch-icon.png` (180x180px)
+- [ ] **Screenshots PWA**: Crear capturas de pantalla para mejorar la experiencia PWA:
+  - `public/screenshot-wide.png` (1280x720px) - Vista desktop de la aplicación
+  - `public/screenshot-mobile.png` (390x844px) - Vista móvil de la aplicación
+- [ ] **Actualizar manifest.json**: Cambiar referencias de SVG a PNG una vez creados los archivos finales
+
+#### Herramientas Recomendadas
+- **Para conversión SVG→PNG**: Figma, Illustrator, Inkscape, o [RealFaviconGenerator](https://realfavicongenerator.net/)
+- **Para favicon.ico**: [Favicon.io](https://favicon.io/) o herramientas de conversión online
+- **Para screenshots**: Usar la aplicación en desarrollo y capturar pantallas reales
+
 ### 🐛 Issues Conocidos
 
 - **Funcionalidad de guardado**: Los formularios no persisten datos (pendiente implementación)

@@ -1,0 +1,12 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#1e40af"/>
+  
+  <!-- Letter P -->
+  <path d="M128 96h128c44.18 0 80 35.82 80 80v0c0 44.18-35.82 80-80 80h-80v160h-48V96z" fill="white"/>
+  <path d="M176 176v80h48c22.09 0 40-17.91 40-40v0c0-22.09-17.91-40-40-40h-48z" fill="#1e40af"/>
+  
+  <!-- Dollar sign accent -->
+  <circle cx="384" cy="384" r="48" fill="white"/>
+  <path d="M376 360h16v32h-16v-32z M392 360h-16c-4.42 0-8 3.58-8 8s3.58 8 8 8h16c4.42 0 8-3.58 8-8s-3.58-8-8-8z M376 384h16c4.42 0 8 3.58 8 8s-3.58 8-8 8h-16c-4.42 0-8-3.58-8-8s3.58-8 8-8z M376 408h16v16h-16v-16z" fill="#1e40af"/>
+</svg>
