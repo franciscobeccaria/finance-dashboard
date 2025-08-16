@@ -359,28 +359,69 @@ Configuración basada en:
 
 ## 📊 Estado Actual del Proyecto
 
-### ✅ Funcionalidades Implementadas
+### ✅ Funcionalidades Implementadas (MVP 1.0)
 
-- [x] **Interfaz de Dashboard** - Layout principal responsive
-- [x] **Visualización de presupuestos** - Cards con indicadores de progreso
-- [x] **Modal de añadir transacción** - Formulario completo con validación de UI
-- [x] **Modal de historial** - Tabla con filtrado por categorías
-- [x] **Sistema de diseño** - Componentes UI consistentes
-- [x] **Responsive design** - Adaptabilidad a diferentes dispositivos
-- [x] **Datos de muestra** - Presupuestos y transacciones para demostración
+#### 🔐 **Autenticación y Sesión**
+- [x] **Google OAuth** - Integración completa con NextAuth.js
+- [x] **Token refresh automático** - Renovación automática de tokens (implementado)
+- [x] **Gestión de sesiones** - Estados de loading y manejo de errores
+
+#### 💰 **Gestión de Presupuestos**
+- [x] **CRUD completo** - Crear, editar y eliminar presupuestos
+- [x] **Integración backend** - Sincronización con API servidor
+- [x] **Cálculo automático** - Gastos por presupuesto en tiempo real
+- [x] **Visualización avanzada** - Cards con progreso y colores semafóricos
+
+#### 💳 **Gestión de Transacciones**
+- [x] **Creación manual** - Formulario completo para nuevas transacciones
+- [x] **Eliminación selectiva** - Solo transacciones manuales
+- [x] **Categorización optimizada** - Asignación con optimistic updates
+- [x] **Edición de descripciones** - Modificación inline (con bug menor)
+- [x] **Montos negativos** - Soporte para reembolsos con UI diferenciada
+- [x] **Filtrado avanzado** - Por categoría y medio de pago
+- [x] **Importación automática** - Desde Gmail API
+
+#### 🎨 **UI/UX y Diseño**
+- [x] **Responsive design** - Adaptabilidad completa a dispositivos
+- [x] **Sistema de loading** - States y skeletons para mejor UX
+- [x] **Branding Presus** - Identidad visual completa
+- [x] **PWA ready** - Manifest y metadatos para instalación
+- [x] **SEO optimizado** - Open Graph, Twitter Cards, metadatos completos
 
 ### 🚧 Próximas Funcionalidades (Roadmap)
 
-- [ ] **Persistencia de datos** - Integración con base de datos o localStorage
-- [ ] **Gestión de estado global** - Context API o Zustand para estado compartido
-- [ ] **Validación de formularios** - React Hook Form + Zod para validaciones
-- [ ] **Notificaciones** - Toast notifications para feedback de usuario
-- [ ] **Configuraciones** - Modal de settings para personalización
-- [ ] **Exportar datos** - Funcionalidad para exportar transacciones (CSV, PDF)
+#### 🔥 **Alta Prioridad - Post-MVP Sprint**
+
+- [ ] **Fix description editing UX bug** 
+  - Ubicación: `ViewTransactionsDialog.tsx:125-127`
+  - Problema: Input no reaparece al hover después de unfocus
+  - Requiere revisión de lógica `editingDescriptionIds`
+
+- [ ] **Implementar toast notifications para errores**
+  - Reemplazar `console.log` y `alert()` actuales con notificaciones elegantes
+  - Mejor feedback para usuarios en operaciones (éxito/error)
+  - Librería sugerida: react-hot-toast o sonner
+
+- [ ] **Crear modal de Settings básico**
+  - Descongelar botón comentado en `Header.tsx:61`
+  - Settings iniciales: configuraciones de usuario, tema
+  - Base para futuras personalizaciones
+
+- [ ] **Test de token refresh en producción**
+  - Ubicación: `route.ts:5-7` 
+  - Verificar implementación actual con tokens expirados reales
+  - Crítico para experiencia de usuario a largo plazo
+
+#### 🟡 **Media Prioridad - Features Futuras**
+
+- [ ] **Validación de formularios** - React Hook Form + Zod para validaciones robustas
 - [ ] **Gráficos y analytics** - Visualización de datos con Chart.js o Recharts
-- [ ] **Categorías personalizadas** - CRUD de presupuestos
-- [ ] **Autenticación** - Login y registro de usuarios
+- [ ] **Exportar datos** - Funcionalidad para exportar transacciones (CSV, PDF)
 - [ ] **Tema oscuro** - Toggle para modo dark/light
+- [ ] **Categorías personalizadas** - CRUD avanzado de presupuestos
+- [ ] **Búsqueda avanzada** - Filtros múltiples y búsqueda por texto
+- [ ] **Offline support** - Service workers para funcionalidad sin conexión
+- [ ] **Push notifications** - Alertas de límites de presupuesto
 
 ### 🎨 Tareas Pendientes de Assets
 
