@@ -2,6 +2,13 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
+
+// Extended session type
+type ExtendedSession = {
+  accessToken?: string;
+  refreshToken?: string;
+  error?: string;
+};
 import { Header } from "@/components/Header";
 import { BudgetCard } from "@/components/BudgetCard";
 import { BudgetCardSkeleton } from "@/components/BudgetCardSkeleton";
@@ -64,7 +71,7 @@ export default function Home() {
     const budgetTypes: BudgetType[] = budgets.map(b => ({
       id: b.id,
       name: b.name,
-      spent: b.spent,
+      spent: b.spent || 0,
       total: b.total,
       isSpecial: b.isSpecial || false
     }));
@@ -118,7 +125,8 @@ export default function Home() {
 
   // Handle transaction categorization and description updates
   const handleCategorizeTransaction = async (transactionId: string, budgetId: string, budgetName: string, description?: string) => {
-    if (!session?.accessToken) return;
+    const extendedSession = session as typeof session & ExtendedSession;
+    if (!extendedSession?.accessToken) return;
     
     console.log('🔄 Categorizing transaction:', { transactionId, budgetId, budgetName, description });
     
@@ -142,7 +150,7 @@ export default function Home() {
       
       // Send request to backend (no need to process response)
       await updateTransactionBudget(
-        session.accessToken,
+        extendedSession.accessToken,
         transactionId,
         budgetId === '' ? null : budgetId,
         description
@@ -168,7 +176,8 @@ export default function Home() {
 
   // Handle deleting a transaction (only manual ones)
   const handleDeleteTransaction = async (transactionId: string) => {
-    if (!session?.accessToken) return;
+    const extendedSession = session as typeof session & ExtendedSession;
+    if (!extendedSession?.accessToken) return;
     
     console.log('🗑️ Deleting transaction:', transactionId);
     
@@ -180,7 +189,7 @@ export default function Home() {
       setUiTransactions(prev => prev.filter(t => t.id !== transactionId));
       
       // Delete from backend
-      await deleteTransaction(session.accessToken, transactionId);
+      await deleteTransaction(extendedSession.accessToken, transactionId);
       
       console.log('✅ Transaction deleted successfully');
       
@@ -223,25 +232,26 @@ export default function Home() {
       return;
     }
     
-    if (!session?.accessToken) return;
+    const extendedSession = session as typeof session & ExtendedSession;
+    if (!extendedSession?.accessToken) return;
     
     try {
       if (currentEditBudget) {
         // Editing existing budget
-        await updateBudget(session.accessToken, budget.id, {
+        await updateBudget(extendedSession.accessToken, budget.id, {
           name: budget.name,
           total_amount: budget.total
         });
       } else {
         // Adding new budget
-        await createBudget(session.accessToken, {
+        await createBudget(extendedSession.accessToken, {
           name: budget.name,
           total_amount: budget.total
         });
       }
       
       // Refresh budgets from backend
-      const updatedBudgets = await fetchBudgets(session.accessToken);
+      const updatedBudgets = await fetchBudgets(extendedSession.accessToken);
       setBudgets(updatedBudgets);
     } catch (error) {
       console.error('Error saving budget:', error);
@@ -256,14 +266,15 @@ export default function Home() {
       return;
     }
     
-    if (!session?.accessToken) return;
+    const extendedSession = session as typeof session & ExtendedSession;
+    if (!extendedSession?.accessToken) return;
     
     try {
       // Delete budget from backend
-      await deleteBudget(session.accessToken, budgetId);
+      await deleteBudget(extendedSession.accessToken, budgetId);
       
       // Refresh budgets from backend
-      const updatedBudgets = await fetchBudgets(session.accessToken);
+      const updatedBudgets = await fetchBudgets(extendedSession.accessToken);
       setBudgets(updatedBudgets);
       
       // Remove the category from any transactions using this budget (both UI and backend states)
@@ -297,13 +308,14 @@ export default function Home() {
     date: Date;
     time: string;
   }) => {
-    if (!session?.accessToken) return;
+    const extendedSession = session as typeof session & ExtendedSession;
+    if (!extendedSession?.accessToken) return;
 
     try {
       console.log('🔄 Creating transaction:', transaction);
       
       // Create transaction via API
-      const createdTransaction = await createTransaction(session.accessToken, {
+      const createdTransaction = await createTransaction(extendedSession.accessToken, {
         merchant: transaction.merchant,
         amount: transaction.amount,
         budgetId: transaction.budgetId || undefined,
@@ -355,7 +367,7 @@ export default function Home() {
           budgetId: transaction.budget_id || '',
           time: `${hours}:${minutes}`,
           paymentMethod: transaction.source,
-          description: transaction.description,
+          description: transaction.description || undefined,
           isManual: !transaction.is_automatic // Manual if not automatic
         };
       });
@@ -398,14 +410,15 @@ export default function Home() {
     const initializeUserData = async () => {
       if (status === "loading") return; // Wait for session to load
       
-      if (!session?.user?.email || !session.accessToken) {
+      const extendedSession = session as typeof session & ExtendedSession;
+      if (!session?.user?.email || !extendedSession.accessToken) {
         setIsLoading(false);
         setHasLoadedData(false);
         return;
       }
 
       // Check for token refresh error
-      if ((session as any).error === 'RefreshAccessTokenError') {
+      if (extendedSession.error === 'RefreshAccessTokenError') {
         console.error('❌ Token refresh failed, user needs to re-login');
         setError('Session expired. Please log in again.');
         setIsLoading(false);
@@ -425,13 +438,13 @@ export default function Home() {
         console.log('🔑 Loading user data with Google token...');
         
         // Load budgets
-        const budgetData = await fetchBudgets(session.accessToken);
+        const budgetData = await fetchBudgets(extendedSession.accessToken);
         setBudgets(budgetData);
         console.log('✅ Budgets loaded:', budgetData.length);
         
         // Load transactions
         try {
-          const transactionData = await fetchAllTransactions(session.accessToken);
+          const transactionData = await fetchAllTransactions(extendedSession.accessToken);
           setTransactions(transactionData);
           console.log('✅ Transactions loaded:', transactionData.length);
         } catch (transErr) {
@@ -454,7 +467,7 @@ export default function Home() {
     };
 
     initializeUserData();
-  }, [session?.user?.email, session?.accessToken, status]); // More specific dependencies
+  }, [session, status, hasLoadedData, budgets.length, isLoading]);
 
   // Show loading screen while checking authentication
   if (status === "loading") {

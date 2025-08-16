@@ -7,7 +7,7 @@ import { NextAuthOptions } from "next-auth"
 // but needs testing with actual expired tokens to verify it works correctly
 
 // Function to refresh the Google access token
-async function refreshAccessToken(token: any) {
+async function refreshAccessToken(token: Record<string, unknown>) {
   try {
     console.log('🔄 Refreshing Google access token...');
     
@@ -20,7 +20,7 @@ async function refreshAccessToken(token: any) {
         client_id: process.env.GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
         grant_type: 'refresh_token',
-        refresh_token: token.refreshToken,
+        refresh_token: token.refreshToken as string,
       }),
     });
 
@@ -37,7 +37,7 @@ async function refreshAccessToken(token: any) {
       ...token,
       accessToken: refreshedTokens.access_token,
       accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
-      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken, // Fall back to old refresh token
+      refreshToken: refreshedTokens.refresh_token ?? (token.refreshToken as string), // Fall back to old refresh token
     };
   } catch (error) {
     console.error('❌ Error refreshing access token:', error);
@@ -49,7 +49,7 @@ async function refreshAccessToken(token: any) {
   }
 }
 
-export const authOptions: NextAuthOptions = {
+const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -85,10 +85,15 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       // Hacemos que los tokens de Google estén disponibles en el objeto de sesión.
-      (session as any).accessToken = token.accessToken as string;
-      (session as any).refreshToken = token.refreshToken as string;
-      (session as any).error = token.error;
-      return session;
+      const extendedSession = session as typeof session & {
+        accessToken?: string;
+        refreshToken?: string;
+        error?: string;
+      };
+      extendedSession.accessToken = token.accessToken as string;
+      extendedSession.refreshToken = token.refreshToken as string;
+      extendedSession.error = token.error as string;
+      return extendedSession;
     },
   },
 };

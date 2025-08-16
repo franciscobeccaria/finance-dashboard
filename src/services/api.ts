@@ -1,5 +1,14 @@
 // API service for interacting with the backend
 
+// Budget type interface
+interface BudgetType {
+  id: string;
+  name: string;
+  spent: number;
+  total: number;
+  isSpecial?: boolean;
+}
+
 // Interface for transactions from the API
 export interface ParsedTransaction {
   messageId: string;
@@ -183,11 +192,19 @@ export async function fetchBudgets(accessToken: string): Promise<BudgetWithSpent
     const data = await response.json();
     
     // Transform backend response to frontend format
-    const transformedData = data.map((budget: any) => ({
+    const transformedData = data.map((budget: { 
+      id: string; 
+      name: string; 
+      total_amount?: number; 
+      total?: number; 
+      spent_amount?: number; 
+      spent?: number;
+      isSpecial?: boolean;
+    }) => ({
       id: budget.id,
       name: budget.name,
-      total: parseFloat(budget.total_amount || budget.total || 0), // Handle both formats
-      isSpecial: budget.is_special || budget.isSpecial || false,
+      total: parseFloat(String(budget.total_amount || budget.total || 0)), // Handle both formats
+      isSpecial: (budget as typeof budget & { is_special?: boolean }).is_special || budget.isSpecial || false,
       spent: budget.spent || 0
     }));
     
@@ -497,7 +514,7 @@ export function initializeUserBudgets(userEmail: string) {
  * @param userEmail - User email from session
  * @param budgets - Budgets to save
  */
-export function saveUserBudgets(userEmail: string, budgets: any[]) {
+export function saveUserBudgets(userEmail: string, budgets: BudgetType[]) {
   const storageKey = `budgets_${userEmail}`;
   localStorage.setItem(storageKey, JSON.stringify(budgets));
   console.log('Budgets saved for user:', userEmail);

@@ -1,4 +1,4 @@
-import { Settings, Plus, Eye, CreditCard, PieChart } from "lucide-react";
+import { Plus, Eye, CreditCard, PieChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
