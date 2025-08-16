@@ -43,6 +43,20 @@ const MOVIMIENTOS_CATEGORY = {
   isSpecial: true, // Flag para identificarla como categoría especial
 };
 
+// Helper function to check if a transaction belongs to "Movimientos" category
+const isMovimientosTransaction = (transaction: UITransaction, allBudgets: BudgetType[]): boolean => {
+  if (!transaction.budgetId) return false;
+  
+  // Check by hardcoded ID
+  if (transaction.budgetId === MOVIMIENTOS_CATEGORY.id || transaction.budgetId === "movimientos") {
+    return true;
+  }
+  
+  // Check by budget name (case insensitive)
+  const budget = allBudgets.find(b => b.id === transaction.budgetId);
+  return budget ? budget.name.toLowerCase() === "movimientos" : false;
+};
+
 // Budget categories are now loaded from user initialization
 
 export default function Home() {
@@ -533,9 +547,17 @@ export default function Home() {
           ) : !error && (
             <div className="mb-6">
               <TotalBudgetCard
-                spent={uiTransactions
-                  .filter(t => t.budgetId !== MOVIMIENTOS_CATEGORY.id && t.budgetId !== "movimientos") // Excluir movimientos del cálculo
-                  .reduce((sum, transaction) => sum + transaction.amount, 0)}
+                spent={(() => {
+                  const filteredTransactions = uiTransactions.filter(t => !isMovimientosTransaction(t, allCategories));
+                  const spent = filteredTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+                  console.log('💰 TotalBudgetCard calculation:', {
+                    totalTransactions: uiTransactions.length,
+                    filteredTransactions: filteredTransactions.length,
+                    movimientosExcluded: uiTransactions.length - filteredTransactions.length,
+                    totalSpent: spent
+                  });
+                  return spent;
+                })()}
                 total={displayBudgets.reduce((sum, budget) => sum + budget.total, 0)}
               />
             </div>
