@@ -26,7 +26,7 @@ import { formatCurrency } from "@/lib/utils";
 import { getPaymentMethodColor } from "@/lib/paymentMethodColors";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, X } from "lucide-react";
+import { PlusCircle, X, Edit } from "lucide-react";
 
 interface Transaction {
   id: string;
@@ -52,7 +52,7 @@ interface ViewTransactionsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   transactions: Transaction[];
-  onCategorize?: (transactionId: string, budgetId: string, budgetName: string) => void;
+  onCategorize?: (transactionId: string, budgetId: string, budgetName: string, description?: string) => void;
   availableBudgets: Budget[];
 }
 
@@ -67,6 +67,8 @@ export function ViewTransactionsDialog({
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string | null>("all");
   // Usamos Set para manejar múltiples transacciones en edición simultáneamente
   const [editingDescriptionIds, setEditingDescriptionIds] = useState<Set<string>>(new Set());
+  // Estado para manejar las descripciones temporales mientras se editan
+  const [tempDescriptions, setTempDescriptions] = useState<Record<string, string>>({});
   
   // Get unique payment methods from transactions
   const uniquePaymentMethods = useMemo(() => {
@@ -94,16 +96,50 @@ export function ViewTransactionsDialog({
   }, [transactions, categoryFilter, paymentMethodFilter]);
 
   // Función para alternar el estado de edición de la descripción
-  const toggleDescriptionEdit = (id: string) => {
+  const toggleDescriptionEdit = (id: string, currentDescription?: string) => {
     setEditingDescriptionIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
+        // Limpiar descripción temporal al cancelar
+        setTempDescriptions(prev => {
+          const newTemp = { ...prev };
+          delete newTemp[id];
+          return newTemp;
+        });
       } else {
         newSet.add(id);
+        // Inicializar descripción temporal
+        setTempDescriptions(prev => ({
+          ...prev,
+          [id]: currentDescription || ''
+        }));
       }
       return newSet;
     });
+  };
+
+  // Función para guardar la descripción
+  const saveDescription = (transactionId: string, description: string) => {
+    const transaction = transactions.find(t => t.id === transactionId);
+    if (transaction) {
+      // Llamar a onCategorize con la descripción actualizada
+      onCategorize(transactionId, transaction.budgetId, transaction.budget, description);
+      
+      // Salir del modo de edición
+      setEditingDescriptionIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(transactionId);
+        return newSet;
+      });
+      
+      // Limpiar descripción temporal
+      setTempDescriptions(prev => {
+        const newTemp = { ...prev };
+        delete newTemp[transactionId];
+        return newTemp;
+      });
+    }
   };
 
 
@@ -197,10 +233,21 @@ export function ViewTransactionsDialog({
                               variant="ghost" 
                               size="sm" 
                               className="h-5 w-5 p-0 text-blue-500 flex items-center justify-center rounded-full sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
-                              onClick={() => toggleDescriptionEdit(transaction.id)}
+                              onClick={() => toggleDescriptionEdit(transaction.id, transaction.description)}
                               title="Añadir descripción"
                             >
                               <PlusCircle className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {transaction.description && !editingDescriptionIds.has(transaction.id) && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-5 w-5 p-0 text-gray-500 flex items-center justify-center rounded-full sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
+                              onClick={() => toggleDescriptionEdit(transaction.id, transaction.description)}
+                              title="Editar descripción"
+                            >
+                              <Edit className="h-3 w-3" />
                             </Button>
                           )}
                         </div>
@@ -213,18 +260,30 @@ export function ViewTransactionsDialog({
                             <Input
                               className="h-6 text-xs bg-transparent border-transparent shadow-none sm:group-hover:bg-background sm:group-hover:border-input sm:group-hover:shadow-sm transition-all"
                               placeholder="Añadir descripción..."
-                              defaultValue=""
-                              // No necesitamos el onChange por ahora
-                              // Sólo guardamos en el blur si hay texto
-                              onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
-                                // Solo cerramos si el campo está vacío
-                                // Si hay texto, mantenemos el input abierto
-                                if (e.target.value.trim() === "") {
-                                  setEditingDescriptionIds(prev => {
-                                    const newSet = new Set(prev);
-                                    newSet.delete(transaction.id);
-                                    return newSet;
-                                  });
+                              value={tempDescriptions[transaction.id] || ''}
+                              onChange={(e) => {
+                                setTempDescriptions(prev => ({
+                                  ...prev,
+                                  [transaction.id]: e.target.value
+                                }));
+                              }}
+                              onBlur={() => {
+                                const description = tempDescriptions[transaction.id]?.trim();
+                                if (description) {
+                                  saveDescription(transaction.id, description);
+                                } else {
+                                  // Cancelar si está vacío
+                                  toggleDescriptionEdit(transaction.id);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const description = tempDescriptions[transaction.id]?.trim();
+                                  if (description) {
+                                    saveDescription(transaction.id, description);
+                                  }
+                                } else if (e.key === 'Escape') {
+                                  toggleDescriptionEdit(transaction.id);
                                 }
                               }}
                               autoFocus
@@ -233,11 +292,7 @@ export function ViewTransactionsDialog({
                               variant="ghost" 
                               size="sm" 
                               className="h-5 w-5 p-0 text-gray-400 flex items-center justify-center rounded-full sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
-                              onClick={() => setEditingDescriptionIds(prev => {
-                                const newSet = new Set(prev);
-                                newSet.delete(transaction.id);
-                                return newSet;
-                              })}
+                              onClick={() => toggleDescriptionEdit(transaction.id)}
                               title="Cancelar"
                             >
                               <X className="h-3 w-3" />

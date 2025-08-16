@@ -11,7 +11,7 @@ import { EditBudgetDialog, Budget as BudgetType } from "@/components/EditBudgetD
 import { Edit } from "lucide-react";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { ViewTransactionsDialog } from "@/components/ViewTransactionsDialog";
-import { fetchAllTransactions, BackendTransaction, fetchBudgets, BudgetWithSpent, createBudget, updateBudget, deleteBudget, updateTransactionBudget } from "@/services/api";
+import { fetchAllTransactions, BackendTransaction, fetchBudgets, BudgetWithSpent, createBudget, updateBudget, deleteBudget, updateTransactionBudget, createTransaction } from "@/services/api";
 import { LoginButton } from "@/components/LoginButton";
 
 // We're now using BudgetType from EditBudgetDialog.tsx
@@ -110,16 +110,13 @@ export default function Home() {
   const handleCategorizeTransaction = async (transactionId: string, budgetId: string, budgetName: string, description?: string) => {
     if (!session?.accessToken) return;
     
+    console.log('🔄 Categorizing transaction:', { transactionId, budgetId, budgetName, description });
+    
+    // Store original state for rollback if needed
+    const originalTransaction = uiTransactions.find(t => t.id === transactionId);
+    
     try {
-      // Update transaction in backend
-      await updateTransactionBudget(
-        session.accessToken,
-        transactionId,
-        budgetId === '' ? null : budgetId,
-        description
-      );
-      
-      // Update local state
+      // Optimistic update - update UI immediately
       setUiTransactions(prev => 
         prev.map(transaction => 
           transaction.id === transactionId 
@@ -127,20 +124,34 @@ export default function Home() {
                 ...transaction, 
                 budget: budgetName, 
                 budgetId: budgetId,
-                // Si description es undefined, eliminamos la propiedad
-                // Si tiene un valor, lo actualizamos
-                // Si no se proporciona (parámetro omitido), mantenemos el valor actual
-                ...(description !== undefined ? { description } : {})
+                ...(description !== undefined && { description })
               } 
             : transaction
         )
       );
       
-      // Refresh budgets to get updated spent amounts
-      const updatedBudgets = await fetchBudgets(session.accessToken);
-      setBudgets(updatedBudgets);
+      // Send request to backend (no need to process response)
+      await updateTransactionBudget(
+        session.accessToken,
+        transactionId,
+        budgetId === '' ? null : budgetId,
+        description
+      );
+      
+      console.log('✅ Category updated successfully');
+      
     } catch (error) {
-      console.error('Error updating transaction budget:', error);
+      console.error('❌ Failed to update category:', error);
+      
+      // Rollback optimistic update only if request failed
+      if (originalTransaction) {
+        setUiTransactions(prev => 
+          prev.map(transaction => 
+            transaction.id === transactionId ? originalTransaction : transaction
+          )
+        );
+      }
+      
       setError(error instanceof Error ? error.message : 'Error updating transaction');
     }
   };
@@ -237,28 +248,24 @@ export default function Home() {
     if (!session?.accessToken) return;
 
     try {
-      // TODO: Implement backend endpoint for creating transactions
       console.log('🔄 Creating transaction:', transaction);
       
-      // For now, just add to local state (will be replaced with API call)
-      const newTransaction = {
-        id: `temp-${Date.now()}`, // Temporary ID
-        date: transaction.date,
-        store: transaction.merchant,
+      // Create transaction via API
+      const createdTransaction = await createTransaction(session.accessToken, {
+        merchant: transaction.merchant,
         amount: transaction.amount,
-        budget: budgets.find(b => b.id === transaction.budgetId)?.name || '',
-        budgetId: transaction.budgetId,
-        time: transaction.time,
-        paymentMethod: 'Manual',
-        description: 'Transacción manual'
-      };
+        budgetId: transaction.budgetId || undefined,
+        date: transaction.date, // Pass Date object directly
+        description: 'Transacción manual',
+        type: 'expense',
+        source: 'Manual'
+      });
       
-      setUiTransactions(prev => [newTransaction, ...prev]);
+      console.log('✅ Transaction created:', createdTransaction);
       
-      // TODO: When backend is ready, use:
-      // await createTransaction(session.accessToken, transaction);
-      // const updatedTransactions = await fetchAllTransactions(session.accessToken);
-      // setTransactions(updatedTransactions);
+      // Add the new transaction to local state 
+      // The useMemo budgetsWithSpent will automatically recalculate spent amounts
+      setTransactions(prev => [createdTransaction, ...prev]);
       
     } catch (error) {
       console.error('Error creating transaction:', error);
@@ -268,38 +275,41 @@ export default function Home() {
   
   // Transform API transactions to UI format when API data changes
   useEffect(() => {
-    if (transactions.length > 0) {
-      const transformedTransactions = transactions
-        .filter(t => t.type === 'expense')
-        .map(transaction => {
-          const date = new Date(transaction.date);
-          const hours = date.getHours().toString().padStart(2, '0');
-          const minutes = date.getMinutes().toString().padStart(2, '0');
-          
-          // Find budget name from budgetId if assigned
-          let budgetName = '';
-          if (transaction.budgetId) {
-            const assignedBudget = budgets.find(b => b.id === transaction.budgetId);
-            if (assignedBudget) {
-              budgetName = assignedBudget.name;
-            }
+    console.log('🔍 All transactions before filter:', transactions);
+    console.log('🔍 Sample transaction structure:', transactions[0]);
+    
+    const transformedTransactions = transactions
+      .filter(t => t.transaction_type === 'expense') // Fix: backend uses transaction_type, not type
+      .map(transaction => {
+        const date = new Date(transaction.transaction_date); // Fix: backend uses transaction_date, not date
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        
+        // Find budget name from budgetId if assigned
+        let budgetName = '';
+        if (transaction.budget_id) { // Fix: backend uses budget_id, not budgetId
+          const assignedBudget = budgets.find(b => b.id === transaction.budget_id);
+          if (assignedBudget) {
+            budgetName = assignedBudget.name;
           }
-          
-          return {
-            id: transaction.id, // Use backend ID instead of messageId
-            date: date,
-            store: transaction.merchant,
-            amount: transaction.amount,
-            budget: budgetName,
-            budgetId: transaction.budgetId || '',
-            time: `${hours}:${minutes}`,
-            paymentMethod: transaction.source,
-            description: transaction.description
-          };
-        });
-      
-      setUiTransactions(transformedTransactions);
-    }
+        }
+        
+        return {
+          id: transaction.id,
+          date: date,
+          store: transaction.merchant,
+          amount: parseFloat(transaction.amount), // Convert string to number
+          budget: budgetName,
+          budgetId: transaction.budget_id || '',
+          time: `${hours}:${minutes}`,
+          paymentMethod: transaction.source,
+          description: transaction.description
+        };
+      });
+    
+    console.log('🔍 Expense transactions after filter:', transformedTransactions.length);
+    console.log('🔄 Transformed transactions for UI:', transformedTransactions);
+    setUiTransactions(transformedTransactions);
   }, [transactions, budgets]);
 
   // Fetch transactions from API

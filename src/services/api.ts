@@ -23,17 +23,29 @@ export interface BudgetWithSpent {
 // Interface for transaction data from backend
 export interface BackendTransaction {
   id: string;
-  messageId: string;
-  date: string;
+  user_id: string;
+  budget_id: string | null;
+  message_id: string;
+  transaction_date: string;
   merchant: string;
-  amount: number;
+  amount: string; // Backend returns as string
   currency: string;
-  type: 'expense' | 'income';
+  transaction_type: 'expense' | 'income';
   source: string;
-  budgetId?: string;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
+  payment_method: string | null;
+  description: string | null;
+  is_automatic: boolean;
+  created_at: string;
+  updated_at: string;
+  budget?: {
+    id: string;
+    user_id: string;
+    name: string;
+    total_amount: string;
+    is_special: boolean;
+    created_at: string;
+    updated_at: string;
+  } | null;
 }
 
 // Backend URL configuration
@@ -290,7 +302,61 @@ export async function deleteBudget(accessToken: string, budgetId: string): Promi
 }
 
 /**
- * Update transaction budget assignment
+ * Create a new manual transaction
+ * @param accessToken - Google access token from session
+ * @param transaction - Transaction data to create
+ * @returns Promise with the created transaction
+ */
+export async function createTransaction(
+  accessToken: string,
+  transaction: {
+    merchant: string;
+    amount: number;
+    budgetId?: string;
+    date: Date | string;
+    description?: string;
+    type?: 'expense' | 'income';
+    source?: string;
+  }
+): Promise<BackendTransaction> {
+  try {
+    // Ensure date is a Date object
+    const transactionDate = typeof transaction.date === 'string' 
+      ? new Date(transaction.date) 
+      : transaction.date;
+
+    const response = await fetch(`${BACKEND_URL}/transactions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        merchant: transaction.merchant,
+        amount: transaction.amount,
+        budget_id: transaction.budgetId || null, // Use snake_case for backend
+        transaction_date: transactionDate.toISOString(),
+        description: transaction.description,
+        transaction_type: transaction.type || 'expense',
+        source: transaction.source || 'Manual',
+        currency: 'ARS' // Default currency
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating transaction:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update transaction budget assignment and description
  * @param accessToken - Google access token from session
  * @param transactionId - ID of the transaction to update
  * @param budgetId - ID of the budget to assign (or null to unassign)
@@ -302,27 +368,49 @@ export async function updateTransactionBudget(
   budgetId: string | null, 
   description?: string
 ): Promise<BackendTransaction> {
+  const url = `${BACKEND_URL}/transactions/${transactionId}`;
+  const payload = {
+    budget_id: budgetId,
+    ...(description !== undefined && { description })
+  };
+  
+  console.log('🔧 API Request:', {
+    method: 'PUT',
+    url,
+    payload,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken ? 'present' : 'missing'}`,
+    }
+  });
+  
   try {
-    const response = await fetch(`${BACKEND_URL}/transactions/${transactionId}`, {
-      method: 'PATCH',
+    const response = await fetch(url, {
+      method: 'PUT', // Fix: backend uses PUT, not PATCH
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({
-        budgetId,
-        ...(description !== undefined && { description })
-      })
+      body: JSON.stringify(payload)
+    });
+
+    console.log('📡 API Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url
     });
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.log('❌ Error Response Body:', errorData);
       throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
     }
 
-    return await response.json();
+    const responseData = await response.json();
+    console.log('✅ Success Response:', responseData);
+    return responseData;
   } catch (error) {
-    console.error('Error updating transaction budget:', error);
+    console.error('❌ Network/Parse Error:', error);
     throw error;
   }
 }
