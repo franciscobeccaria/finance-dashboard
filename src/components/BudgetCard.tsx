@@ -30,7 +30,10 @@ export function BudgetCard({ name, spent, total }: BudgetCardProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <p className="text-lg font-bold text-gray-900">{formatCurrency(spent)} <span className="text-sm font-normal text-gray-500">/ {formatCurrency(total)}</span></p>
+          <p className="text-lg font-bold text-gray-900">
+            <span className={spent < 0 ? "text-red-600" : ""}>{formatCurrency(spent)}</span>
+            <span className="text-sm font-normal text-gray-500"> / {formatCurrency(total)}</span>
+          </p>
           <div className="flex justify-between items-center">
             <p className="text-sm font-medium">{percentage}%</p>
           </div>

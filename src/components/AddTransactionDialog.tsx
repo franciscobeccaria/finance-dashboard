@@ -116,7 +116,7 @@ export function AddTransactionDialog({
               id="monto"
               type="number"
               step="0.01"
-              placeholder="0"
+              placeholder="0 (negativos para reembolsos)"
               className="col-span-3"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}

@@ -22,7 +22,10 @@ export function TotalBudgetCard({ spent, total }: TotalBudgetCardProps) {
       </CardHeader>
       <CardContent>
         <div className="flex justify-between items-baseline mb-2">
-          <h2 className="text-2xl font-bold mb-2">{formatCurrency(spent)} <span className="text-lg font-normal text-gray-600">/ {formatCurrency(total)}</span></h2>
+          <h2 className="text-2xl font-bold mb-2">
+            <span className={spent < 0 ? "text-red-600" : ""}>{formatCurrency(spent)}</span>
+            <span className="text-lg font-normal text-gray-600"> / {formatCurrency(total)}</span>
+          </h2>
         </div>
         <Progress 
           value={percentage} 

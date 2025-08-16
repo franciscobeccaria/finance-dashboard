@@ -362,6 +362,52 @@ export async function createTransaction(
  * @param budgetId - ID of the budget to assign (or null to unassign)
  * @param description - Optional custom description
  */
+/**
+ * Delete a transaction
+ * @param accessToken - Google access token from session
+ * @param transactionId - ID of the transaction to delete
+ */
+export async function deleteTransaction(
+  accessToken: string, 
+  transactionId: string
+): Promise<void> {
+  const url = `${BACKEND_URL}/transactions/${transactionId}`;
+  
+  console.log('🗑️ API Request - Delete Transaction:', {
+    method: 'DELETE',
+    url,
+    headers: {
+      'Authorization': `Bearer ${accessToken ? 'present' : 'missing'}`,
+    }
+  });
+  
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    console.log('📡 API Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.log('❌ Error Response Body:', errorData);
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+
+    console.log('✅ Transaction deleted successfully');
+  } catch (error) {
+    console.error('❌ Network/Parse Error:', error);
+    throw error;
+  }
+}
+
 export async function updateTransactionBudget(
   accessToken: string, 
   transactionId: string, 

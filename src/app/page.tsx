@@ -11,7 +11,7 @@ import { EditBudgetDialog, Budget as BudgetType } from "@/components/EditBudgetD
 import { Edit } from "lucide-react";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { ViewTransactionsDialog } from "@/components/ViewTransactionsDialog";
-import { fetchAllTransactions, BackendTransaction, fetchBudgets, BudgetWithSpent, createBudget, updateBudget, deleteBudget, updateTransactionBudget, createTransaction } from "@/services/api";
+import { fetchAllTransactions, BackendTransaction, fetchBudgets, BudgetWithSpent, createBudget, updateBudget, deleteBudget, updateTransactionBudget, createTransaction, deleteTransaction } from "@/services/api";
 import { LoginButton } from "@/components/LoginButton";
 
 // We're now using BudgetType from EditBudgetDialog.tsx
@@ -155,6 +155,39 @@ export default function Home() {
       setError(error instanceof Error ? error.message : 'Error updating transaction');
     }
   };
+
+  // Handle deleting a transaction (only manual ones)
+  const handleDeleteTransaction = async (transactionId: string) => {
+    if (!session?.accessToken) return;
+    
+    console.log('🗑️ Deleting transaction:', transactionId);
+    
+    // Store original state for rollback if needed
+    const originalTransaction = uiTransactions.find(t => t.id === transactionId);
+    
+    try {
+      // Optimistic update - remove from UI immediately
+      setUiTransactions(prev => prev.filter(t => t.id !== transactionId));
+      
+      // Delete from backend
+      await deleteTransaction(session.accessToken, transactionId);
+      
+      console.log('✅ Transaction deleted successfully');
+      
+      // Also remove from backend transactions state
+      setTransactions(prev => prev.filter(t => t.id !== transactionId));
+      
+    } catch (error) {
+      console.error('❌ Failed to delete transaction:', error);
+      
+      // Rollback optimistic update if request failed
+      if (originalTransaction) {
+        setUiTransactions(prev => [...prev, originalTransaction]);
+      }
+      
+      setError(error instanceof Error ? error.message : 'Error deleting transaction');
+    }
+  };
   
   // Handle opening the edit budget dialog
   const handleEditBudget = (budget: BudgetType) => {
@@ -223,11 +256,20 @@ export default function Home() {
       const updatedBudgets = await fetchBudgets(session.accessToken);
       setBudgets(updatedBudgets);
       
-      // Remove the category from any transactions using this budget
+      // Remove the category from any transactions using this budget (both UI and backend states)
       setUiTransactions(prev => 
         prev.map(transaction => 
           transaction.budgetId === budgetId 
             ? { ...transaction, budget: '', budgetId: '' } 
+            : transaction
+        )
+      );
+      
+      // Also update backend transactions state to keep consistency
+      setTransactions(prev => 
+        prev.map(transaction => 
+          transaction.budget_id === budgetId 
+            ? { ...transaction, budget_id: null } 
             : transaction
         )
       );
@@ -303,7 +345,8 @@ export default function Home() {
           budgetId: transaction.budget_id || '',
           time: `${hours}:${minutes}`,
           paymentMethod: transaction.source,
-          description: transaction.description
+          description: transaction.description,
+          isManual: !transaction.is_automatic // Manual if not automatic
         };
       });
     
@@ -337,6 +380,9 @@ export default function Home() {
     getTransactions();
   }, []); */
   
+  // Track if data has been loaded to prevent unnecessary refetches
+  const [hasLoadedData, setHasLoadedData] = useState(false);
+  
   // Initialize user data and fetch transactions when authenticated
   useEffect(() => {
     const initializeUserData = async () => {
@@ -344,6 +390,21 @@ export default function Home() {
       
       if (!session?.user?.email || !session.accessToken) {
         setIsLoading(false);
+        setHasLoadedData(false);
+        return;
+      }
+
+      // Check for token refresh error
+      if ((session as any).error === 'RefreshAccessTokenError') {
+        console.error('❌ Token refresh failed, user needs to re-login');
+        setError('Session expired. Please log in again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Skip if data already loaded and we have valid data (unless it's a fresh login)
+      if (hasLoadedData && budgets.length > 0 && !isLoading) {
+        console.log('🚫 Skipping refetch - data already loaded');
         return;
       }
 
@@ -351,14 +412,14 @@ export default function Home() {
       setError(null);
       
       try {
-        console.log('🔑 Testing authentication with Google token...');
+        console.log('🔑 Loading user data with Google token...');
         
-        // Test budgets first (should work)
+        // Load budgets
         const budgetData = await fetchBudgets(session.accessToken);
         setBudgets(budgetData);
         console.log('✅ Budgets loaded:', budgetData.length);
         
-        // Test transactions (might not work yet)
+        // Load transactions
         try {
           const transactionData = await fetchAllTransactions(session.accessToken);
           setTransactions(transactionData);
@@ -368,19 +429,22 @@ export default function Home() {
           setTransactions([]); // Set empty array to continue
         }
         
+        setHasLoadedData(true);
+        
         if (budgetData.length > 0) {
           console.log('📊 Sample budget:', budgetData[0]);
         }
       } catch (err: unknown) {
         console.error('❌ Error initializing user data:', err);
         setError(err instanceof Error ? err.message : 'Error loading data from backend');
+        setHasLoadedData(false);
       } finally {
         setIsLoading(false);
       }
     };
 
     initializeUserData();
-  }, [session, status]);
+  }, [session?.user?.email, session?.accessToken, status]); // More specific dependencies
 
   // Show loading screen while checking authentication
   if (status === "loading") {
@@ -497,6 +561,7 @@ export default function Home() {
         onOpenChange={setViewDialogOpen}
         transactions={uiTransactions}
         onCategorize={handleCategorizeTransaction}
+        onDelete={handleDeleteTransaction}
         availableBudgets={allCategories}
       />
       

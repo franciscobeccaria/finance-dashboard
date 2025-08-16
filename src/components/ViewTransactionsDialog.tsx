@@ -26,7 +26,7 @@ import { formatCurrency } from "@/lib/utils";
 import { getPaymentMethodColor } from "@/lib/paymentMethodColors";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, X, Edit } from "lucide-react";
+import { PlusCircle, X, Trash2 } from "lucide-react";
 
 interface Transaction {
   id: string;
@@ -38,6 +38,7 @@ interface Transaction {
   time?: string;
   paymentMethod?: string; // Nuevo: medio de pago (tarjeta, banco, etc)
   description?: string; // Nuevo: descripción personalizada de la transacción
+  isManual?: boolean; // Nuevo: indica si es transacción manual (eliminable)
 }
 
 interface Budget {
@@ -53,6 +54,7 @@ interface ViewTransactionsDialogProps {
   onOpenChange: (open: boolean) => void;
   transactions: Transaction[];
   onCategorize?: (transactionId: string, budgetId: string, budgetName: string, description?: string) => void;
+  onDelete?: (transactionId: string) => void;
   availableBudgets: Budget[];
 }
 
@@ -61,6 +63,7 @@ export function ViewTransactionsDialog({
   onOpenChange,
   transactions,
   onCategorize = () => {},
+  onDelete = () => {},
   availableBudgets = []
 }: ViewTransactionsDialogProps) {
   const [categoryFilter, setCategoryFilter] = useState<string | null>("all");
@@ -119,6 +122,10 @@ export function ViewTransactionsDialog({
     });
   };
 
+  // TODO: Fix description editing flow - input should reappear on hover after unfocus
+  // Currently the input doesn't reappear consistently when hovering after blur
+  // Need to review the conditional logic for editingDescriptionIds state management
+  
   // Función para guardar la descripción
   const saveDescription = (transactionId: string, description: string) => {
     const transaction = transactions.find(t => t.id === transactionId);
@@ -228,34 +235,19 @@ export function ViewTransactionsDialog({
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2 relative">
                           <span className="font-medium">{transaction.store}</span>
-                          {!transaction.description && !editingDescriptionIds.has(transaction.id) && (
+                          {!editingDescriptionIds.has(transaction.id) && (
                             <Button 
                               variant="ghost" 
                               size="sm" 
                               className="h-5 w-5 p-0 text-blue-500 flex items-center justify-center rounded-full sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
                               onClick={() => toggleDescriptionEdit(transaction.id, transaction.description)}
-                              title="Añadir descripción"
+                              title={transaction.description ? "Editar descripción" : "Añadir descripción"}
                             >
                               <PlusCircle className="h-3 w-3" />
                             </Button>
                           )}
-                          {transaction.description && !editingDescriptionIds.has(transaction.id) && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-5 w-5 p-0 text-gray-500 flex items-center justify-center rounded-full sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
-                              onClick={() => toggleDescriptionEdit(transaction.id, transaction.description)}
-                              title="Editar descripción"
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                          )}
                         </div>
-                        {transaction.description ? (
-                          <div className="flex items-center gap-2 relative">
-                            <span className="text-xs text-gray-500">{transaction.description}</span>
-                          </div>
-                        ) : editingDescriptionIds.has(transaction.id) && (
+                        {editingDescriptionIds.has(transaction.id) ? (
                           <div className="flex items-center gap-2 mt-1">
                             <Input
                               className="h-6 text-xs bg-transparent border-transparent shadow-none sm:group-hover:bg-background sm:group-hover:border-input sm:group-hover:shadow-sm transition-all"
@@ -298,10 +290,18 @@ export function ViewTransactionsDialog({
                               <X className="h-3 w-3" />
                             </Button>
                           </div>
+                        ) : transaction.description && (
+                          <div className="flex items-center gap-2 relative">
+                            <span className="text-xs text-gray-500">{transaction.description}</span>
+                          </div>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{formatCurrency(transaction.amount)}</TableCell>
+                    <TableCell>
+                      <span className={transaction.amount < 0 ? "text-red-600 font-medium" : ""}>
+                        {formatCurrency(transaction.amount)}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       {transaction.paymentMethod ? (
                         <span className={`text-sm font-medium ${getPaymentMethodColor(transaction.paymentMethod) || ''}`}>
@@ -314,7 +314,7 @@ export function ViewTransactionsDialog({
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <Select
                           value={transaction.budgetId || "uncategorized"}
                           onValueChange={(value) => {
@@ -347,6 +347,19 @@ export function ViewTransactionsDialog({
                             ))}
                           </SelectContent>
                         </Select>
+                        
+                        {/* Delete button - only for manual transactions */}
+                        {transaction.isManual && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => onDelete(transaction.id)}
+                            title="Eliminar transacción"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
