@@ -89,6 +89,13 @@ export async function fetchAllTransactions(accessToken: string): Promise<Backend
 
     if (!response.ok) {
       const errorData = await response.json();
+      
+      // Handle authentication errors specifically
+      if (response.status === 401) {
+        console.error('❌ Authentication failed - token expired or invalid');
+        throw new Error('AUTHENTICATION_ERROR');
+      }
+      
       throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
     }
 
@@ -186,6 +193,13 @@ export async function fetchBudgets(accessToken: string): Promise<BudgetWithSpent
 
     if (!response.ok) {
       const errorData = await response.json();
+      
+      // Handle authentication errors specifically
+      if (response.status === 401) {
+        console.error('❌ Authentication failed - token expired or invalid');
+        throw new Error('AUTHENTICATION_ERROR');
+      }
+      
       throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
     }
 

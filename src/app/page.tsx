@@ -448,6 +448,10 @@ export default function Home() {
           setTransactions(transactionData);
           console.log('✅ Transactions loaded:', transactionData.length);
         } catch (transErr) {
+          // Re-throw authentication errors to be handled by outer catch
+          if (transErr instanceof Error && transErr.message === 'AUTHENTICATION_ERROR') {
+            throw transErr;
+          }
           console.log('⚠️ Transactions endpoint not ready:', transErr);
           setTransactions([]); // Set empty array to continue
         }
@@ -459,6 +463,17 @@ export default function Home() {
         }
       } catch (err: unknown) {
         console.error('❌ Error initializing user data:', err);
+        
+        // Handle authentication errors specifically
+        if (err instanceof Error && err.message === 'AUTHENTICATION_ERROR') {
+          console.error('🔐 Authentication failed - redirecting to login');
+          setError('Session expired. Please log in again.');
+          setHasLoadedData(false);
+          // Force logout to clear invalid tokens
+          window.location.href = '/api/auth/signout';
+          return;
+        }
+        
         setError(err instanceof Error ? err.message : 'Error loading data from backend');
         setHasLoadedData(false);
       } finally {
@@ -467,7 +482,8 @@ export default function Home() {
     };
 
     initializeUserData();
-  }, [session, status, hasLoadedData, budgets.length, isLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.email, status]); // Specific dependencies to prevent infinite loops - other deps cause infinite loop
 
   // Show loading screen while checking authentication
   if (status === "loading") {
