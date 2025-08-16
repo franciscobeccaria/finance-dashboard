@@ -29,7 +29,7 @@ interface UITransaction {
   description?: string; // Nuevo campo para descripción personalizada
 }
 
-// Definir categoría especial para movimientos (no aparece como presupuesto)
+// Definir categoría especial para movimientos (hardcodeada en frontend)
 const MOVIMIENTOS_CATEGORY = {
   id: "movimientos",
   name: "Movimientos",
@@ -57,10 +57,10 @@ export default function Home() {
   // State for budgets (loaded from backend)
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   
-  // Siempre asegurémonos de tener la categoría especial "Movimientos" disponible para transacciones
-  // pero no se muestra como presupuesto
+  // Combinar presupuestos del backend con categoría especial "Movimientos" hardcodeada
+  // pero evitando duplicados si el backend ya incluye "Movimientos"
   const allCategories = useMemo<BudgetType[]>(() => {
-    // Convert BudgetWithSpent to BudgetType and add movimientos category
+    // Convert backend budgets to frontend format
     const budgetTypes: BudgetType[] = budgets.map(b => ({
       id: b.id,
       name: b.name,
@@ -69,12 +69,22 @@ export default function Home() {
       isSpecial: b.isSpecial || false
     }));
     
-    // Verificar si ya está incluida en los presupuestos (no debería, pero por seguridad)
-    const movimientosExists = budgetTypes.some(b => b.id === MOVIMIENTOS_CATEGORY.id);
-    if (!movimientosExists) {
+    // Verificar si el backend ya incluye una categoría "Movimientos"
+    const movimientosFromBackend = budgetTypes.find(b => 
+      b.name.toLowerCase() === "movimientos" || b.id === "movimientos"
+    );
+    
+    if (movimientosFromBackend) {
+      // Si el backend ya tiene "Movimientos", usar esa versión pero asegurar que sea especial
+      return budgetTypes.map(b => 
+        b.id === movimientosFromBackend.id 
+          ? { ...b, isSpecial: true }
+          : b
+      );
+    } else {
+      // Si no existe en backend, agregar la versión hardcodeada
       return [...budgetTypes, {...MOVIMIENTOS_CATEGORY, spent: 0, total: 0}];
     }
-    return budgetTypes;
   }, [budgets]);
   
   // Calculate spent amounts for each budget based on categorized transactions
@@ -192,7 +202,7 @@ export default function Home() {
   // Handle opening the edit budget dialog
   const handleEditBudget = (budget: BudgetType) => {
     // No permitir editar la categoría especial Movimientos
-    if (budget.id === MOVIMIENTOS_CATEGORY.id) {
+    if (budget.id === MOVIMIENTOS_CATEGORY.id || budget.name.toLowerCase() === "movimientos") {
       return;
     }
     
@@ -209,7 +219,7 @@ export default function Home() {
   // Handle saving a budget (new or edited)
   const handleSaveBudget = async (budget: Omit<BudgetType, "spent">) => {
     // Prevenir edición o creación de presupuestos con el ID de movimientos
-    if (budget.id === MOVIMIENTOS_CATEGORY.id) {
+    if (budget.id === MOVIMIENTOS_CATEGORY.id || budget.name.toLowerCase() === "movimientos") {
       return;
     }
     
@@ -242,7 +252,7 @@ export default function Home() {
   // Handle deleting a budget
   const handleDeleteBudget = async (budgetId: string) => {
     // No permitir eliminar la categoría especial de Movimientos
-    if (budgetId === MOVIMIENTOS_CATEGORY.id) {
+    if (budgetId === MOVIMIENTOS_CATEGORY.id || budgetId === "movimientos") {
       return;
     }
     
@@ -298,7 +308,7 @@ export default function Home() {
         amount: transaction.amount,
         budgetId: transaction.budgetId || undefined,
         date: transaction.date, // Pass Date object directly
-        description: 'Transacción manual',
+        description: '',
         type: 'expense',
         source: 'Manual'
       });
@@ -495,7 +505,7 @@ export default function Home() {
             <div className="mb-6">
               <TotalBudgetCard
                 spent={uiTransactions
-                  .filter(t => t.budgetId !== MOVIMIENTOS_CATEGORY.id) // Excluir movimientos del cálculo
+                  .filter(t => t.budgetId !== MOVIMIENTOS_CATEGORY.id && t.budgetId !== "movimientos") // Excluir movimientos del cálculo
                   .reduce((sum, transaction) => sum + transaction.amount, 0)}
                 total={displayBudgets.reduce((sum, budget) => sum + budget.total, 0)}
               />

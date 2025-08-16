@@ -60,8 +60,7 @@ export const DEFAULT_BUDGETS = [
   { id: "5", name: "Servicios", spent: 0, total: 400, isSpecial: false },
   { id: "6", name: "Salud", spent: 0, total: 350, isSpecial: false },
   { id: "7", name: "Ropa", spent: 0, total: 200, isSpecial: false },
-  { id: "8", name: "Otros", spent: 0, total: 150, isSpecial: false },
-  { id: "movimientos", name: "Movimientos", spent: 0, total: 0, isSpecial: true }
+  { id: "8", name: "Otros", spent: 0, total: 150, isSpecial: false }
 ];
 
 /**

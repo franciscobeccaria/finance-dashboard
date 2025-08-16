@@ -174,7 +174,15 @@ export function ViewTransactionsDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las categorías</SelectItem>
-                  {availableBudgets.map(budget => (
+                  {availableBudgets
+                    .sort((a, b) => {
+                      // Movimientos siempre al final
+                      if (a.isSpecial && a.name.toLowerCase() === "movimientos") return 1;
+                      if (b.isSpecial && b.name.toLowerCase() === "movimientos") return -1;
+                      // Resto alfabético
+                      return a.name.localeCompare(b.name);
+                    })
+                    .map(budget => (
                     <SelectItem 
                       key={budget.id} 
                       value={budget.id}
@@ -336,7 +344,15 @@ export function ViewTransactionsDialog({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="uncategorized">Sin categoría</SelectItem>
-                            {availableBudgets.map(budget => (
+                            {availableBudgets
+                              .sort((a, b) => {
+                                // Movimientos siempre al final
+                                if (a.isSpecial && a.name.toLowerCase() === "movimientos") return 1;
+                                if (b.isSpecial && b.name.toLowerCase() === "movimientos") return -1;
+                                // Resto alfabético
+                                return a.name.localeCompare(b.name);
+                              })
+                              .map(budget => (
                               <SelectItem 
                                 key={budget.id} 
                                 value={budget.id}
