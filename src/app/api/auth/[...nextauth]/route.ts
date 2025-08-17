@@ -9,7 +9,6 @@ import { NextAuthOptions } from "next-auth"
 // Function to refresh the Google access token
 async function refreshAccessToken(token: Record<string, unknown>) {
   try {
-    console.log('🔄 Refreshing Google access token...');
     
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -31,7 +30,6 @@ async function refreshAccessToken(token: Record<string, unknown>) {
       throw refreshedTokens;
     }
 
-    console.log('✅ Token refreshed successfully');
     
     return {
       ...token,
@@ -77,7 +75,6 @@ const authOptions: NextAuthOptions = {
 
       // Check if access token is expired and refresh it
       if (token.accessTokenExpires && Date.now() > (token.accessTokenExpires as number)) {
-        console.log('🔄 Access token expired, refreshing...');
         return await refreshAccessToken(token);
       }
 

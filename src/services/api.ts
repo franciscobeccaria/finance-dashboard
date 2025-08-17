@@ -1,13 +1,5 @@
 // API service for interacting with the backend
 
-// Budget type interface
-interface BudgetType {
-  id: string;
-  name: string;
-  spent: number;
-  total: number;
-  isSpecial?: boolean;
-}
 
 // Interface for transactions from the API
 export interface ParsedTransaction {
@@ -60,17 +52,6 @@ export interface BackendTransaction {
 // Backend URL configuration
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
-// Default budgets for new users
-export const DEFAULT_BUDGETS = [
-  { id: "1", name: "Supermercado", spent: 0, total: 500, isSpecial: false },
-  { id: "2", name: "Restaurantes", spent: 0, total: 300, isSpecial: false },
-  { id: "3", name: "Transporte", spent: 0, total: 200, isSpecial: false },
-  { id: "4", name: "Entretenimiento", spent: 0, total: 250, isSpecial: false },
-  { id: "5", name: "Servicios", spent: 0, total: 400, isSpecial: false },
-  { id: "6", name: "Salud", spent: 0, total: 350, isSpecial: false },
-  { id: "7", name: "Ropa", spent: 0, total: 200, isSpecial: false },
-  { id: "8", name: "Otros", spent: 0, total: 150, isSpecial: false }
-];
 
 /**
  * Fetch all transactions from backend (consolidated endpoint)
@@ -99,11 +80,6 @@ export async function fetchAllTransactions(
     const queryString = queryParams.toString();
     const url = `${BACKEND_URL}/transactions/all${queryString ? `?${queryString}` : ''}`;
     
-    console.log('🔍 Fetching transactions with date filter:', { 
-      startDate: startDate?.toISOString().split('T')[0], 
-      endDate: endDate?.toISOString().split('T')[0],
-      url 
-    });
     
     const response = await fetch(url, {
       method: 'GET',
@@ -161,7 +137,6 @@ export async function fetchTransactions(
   const afterDate = formatGmailDate(defaultStartDate);
   const beforeDate = formatGmailDate(defaultEndDate);
   
-  console.log('🔍 Gmail search date range:', { afterDate, beforeDate });
   
   const requestBody = {
     q: `(from:"Informes Naranja X" OR from:"Aviso Santander" OR from:"belo" OR from:"Mercado Libre") subject:("Ingresó una compra" OR "Pagaste" OR "Aviso de operación" OR "Envío exitoso" OR "Retiro exitoso" OR "Recibiste tu compra") after:${afterDate} before:${beforeDate}`
@@ -272,7 +247,6 @@ export async function fetchBudgets(accessToken: string): Promise<BudgetWithSpent
       spent: budget.spent || 0
     }));
     
-    console.log('🔄 Transformed budget data:', transformedData);
     return transformedData;
   } catch (error) {
     console.error('Error fetching budgets:', error);
@@ -453,13 +427,6 @@ export async function deleteTransaction(
 ): Promise<void> {
   const url = `${BACKEND_URL}/transactions/${transactionId}`;
   
-  console.log('🗑️ API Request - Delete Transaction:', {
-    method: 'DELETE',
-    url,
-    headers: {
-      'Authorization': `Bearer ${accessToken ? 'present' : 'missing'}`,
-    }
-  });
   
   try {
     const response = await fetch(url, {
@@ -469,19 +436,12 @@ export async function deleteTransaction(
       },
     });
 
-    console.log('📡 API Response:', {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url
-    });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.log('❌ Error Response Body:', errorData);
       throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
     }
 
-    console.log('✅ Transaction deleted successfully');
   } catch (error) {
     console.error('❌ Network/Parse Error:', error);
     throw error;
@@ -500,15 +460,6 @@ export async function updateTransactionBudget(
     ...(description !== undefined && { description })
   };
   
-  console.log('🔧 API Request:', {
-    method: 'PUT',
-    url,
-    payload,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken ? 'present' : 'missing'}`,
-    }
-  });
   
   try {
     const response = await fetch(url, {
@@ -520,20 +471,13 @@ export async function updateTransactionBudget(
       body: JSON.stringify(payload)
     });
 
-    console.log('📡 API Response:', {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url
-    });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.log('❌ Error Response Body:', errorData);
       throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
     }
 
     const responseData = await response.json();
-    console.log('✅ Success Response:', responseData);
     return responseData;
   } catch (error) {
     console.error('❌ Network/Parse Error:', error);
@@ -541,45 +485,3 @@ export async function updateTransactionBudget(
   }
 }
 
-// Legacy functions for localStorage (will be removed after migration)
-/**
- * Initialize user data when logging in for the first time
- * This will be replaced by a backend endpoint in the future
- * @param userEmail - User email from session
- * @returns Default budgets for the user
- */
-export function initializeUserBudgets(userEmail: string) {
-  const storageKey = `budgets_${userEmail}`;
-  
-  // Check if user already has budgets in localStorage
-  const existingBudgets = localStorage.getItem(storageKey);
-  
-  if (!existingBudgets) {
-    // First time user - initialize with default budgets
-    localStorage.setItem(storageKey, JSON.stringify(DEFAULT_BUDGETS));
-    console.log('First time user detected, initialized default budgets for:', userEmail);
-    return DEFAULT_BUDGETS;
-  }
-  
-  // Returning user - load existing budgets
-  try {
-    const parsedBudgets = JSON.parse(existingBudgets);
-    console.log('Returning user detected, loaded existing budgets for:', userEmail);
-    return parsedBudgets;
-  } catch (error) {
-    console.error('Error parsing stored budgets, reinitializing:', error);
-    localStorage.setItem(storageKey, JSON.stringify(DEFAULT_BUDGETS));
-    return DEFAULT_BUDGETS;
-  }
-}
-
-/**
- * Save user budgets to localStorage (temporary until backend is ready)
- * @param userEmail - User email from session
- * @param budgets - Budgets to save
- */
-export function saveUserBudgets(userEmail: string, budgets: BudgetType[]) {
-  const storageKey = `budgets_${userEmail}`;
-  localStorage.setItem(storageKey, JSON.stringify(budgets));
-  console.log('Budgets saved for user:', userEmail);
-}

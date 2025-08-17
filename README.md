@@ -388,19 +388,37 @@ Configuración basada en:
 - [x] **PWA ready** - Manifest y metadatos para instalación
 - [x] **SEO optimizado** - Open Graph, Twitter Cards, metadatos completos
 
+### ✅ Completado Recientemente
+
+#### 🧹 **Limpieza de Código - Sprint de Calidad (17/Ago/2025)**
+
+**UX Improvements:**
+- **Fixed description editing flow**: Input siempre visible, botón X para eliminar, UX consistente mobile/desktop
+- **Toast notifications**: Implementado Sonner component de shadcn/ui para errores elegantes
+
+**Code Quality:**  
+- **Removed legacy localStorage functions**: Eliminadas `initializeUserBudgets()`, `saveUserBudgets()` y `DEFAULT_BUDGETS`
+- **Console.log cleanup**: Eliminados 60+ statements de debug, manteniendo solo console.error críticos
+- **Dead code removal**: Limpiado código comentado y TODOs obsoletos
+- **Alert() replacement**: Reemplazados con toast.error() para mejor UX
+
+**Files affected:** `ViewTransactionsDialog.tsx`, `AddTransactionDialog.tsx`, `api.ts`, `page.tsx`, `layout.tsx`
+
+---
+
 ### 🚧 Próximas Funcionalidades (Roadmap)
 
 #### 🔥 **Alta Prioridad - Post-MVP Sprint**
 
-- [ ] **Fix description editing UX bug** 
-  - Ubicación: `ViewTransactionsDialog.tsx:125-127`
-  - Problema: Input no reaparece al hover después de unfocus
-  - Requiere revisión de lógica `editingDescriptionIds`
+- [x] **Fix description editing UX bug** ✅ COMPLETADO
+  - Problema RESUELTO: Input ahora siempre visible, flujo simplificado
+  - Solución: Input permanente con botón X para eliminar descripción
+  - UX mejorada: Mismo comportamiento en mobile y desktop
 
-- [ ] **Implementar toast notifications para errores**
-  - Reemplazar `console.log` y `alert()` actuales con notificaciones elegantes
-  - Mejor feedback para usuarios en operaciones (éxito/error)
-  - Librería sugerida: react-hot-toast o sonner
+- [x] **Implementar toast notifications para errores** ✅ COMPLETADO
+  - Implementado: Sonner toast component de shadcn/ui
+  - Reemplazados todos los `alert()` con `toast.error()`
+  - Mejor feedback: Solo errores, no success (UX menos intrusiva)
 
 - [ ] **Crear modal de Settings básico**
   - Descongelar botón comentado en `Header.tsx:61`
@@ -481,9 +499,9 @@ Configuración basada en:
 - [ ] **PFIN-011: Implementar Parser de Mercado Libre** - `[BACKEND]` Añadir el parser para la fuente de datos más importante que falta, probablemente requiriendo obtener el cuerpo completo del correo.
 - [ ] **PFIN-012: Implementar Gestión de Estado Global** - `[FRONTEND]` Integrar una librería como Zustand o React Context para manejar de forma más robusta el estado global.
 - [ ] **PFIN-013: Implementar Validación de Formularios** - `[FRONTEND]` Añadir validación del lado del cliente a los modales (ej. con Zod + React Hook Form) para una mejor UX.
-- [ ] **PFIN-014: Implementar Notificaciones (Toasts)** - `[FRONTEND]` Añadir feedback visual para el usuario tras acciones exitosas o fallidas (ej. "Presupuesto guardado").
+- [x] **PFIN-014: Implementar Notificaciones (Toasts)** ✅ COMPLETADO - `[FRONTEND]` Añadido feedback visual con Sonner toast component para errores.
 - [ ] **PFIN-015: Implementar Rate Limiting** - `[BACKEND]` Añadir un límite de peticiones a la API para prevenir abusos y controlar costos.
-- [ ] **PFIN-016: Limpiar Código Legacy del Frontend** - `[FRONTEND]` [CHORE] Refactorizar la aplicación para eliminar completamente cualquier uso de `localStorage` o datos de muestra hardcodeados.
+- [x] **PFIN-016: Limpiar Código Legacy del Frontend** ✅ COMPLETADO - `[FRONTEND]` [CHORE] Eliminadas funciones de `localStorage` y datos hardcodeados (DEFAULT_BUDGETS).
 
 ---
 

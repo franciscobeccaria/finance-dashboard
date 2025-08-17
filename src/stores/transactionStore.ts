@@ -49,7 +49,6 @@ export const useTransactionStore = create<TransactionStore>((set, get) => ({
 
   // Setear fecha seleccionada
   setSelectedDate: (date: Date) => {
-    console.log('🗓️ Store: Setting selected date to:', date.toLocaleDateString('es-ES'));
     set({ selectedDate: date });
   },
 
@@ -80,17 +79,14 @@ export const useTransactionStore = create<TransactionStore>((set, get) => ({
 
     // Si ya tenemos datos para este mes, no hacer request
     if (transactionsByMonth[monthKey]) {
-      console.log(`📋 Store: Using cached data for ${monthKey}, ${transactionsByMonth[monthKey].length} transactions`);
       return;
     }
 
     // Si ya está cargando este mes, evitar duplicados
     if (loadingByMonth[monthKey]) {
-      console.log(`⏳ Store: Already loading ${monthKey}, skipping duplicate request`);
       return;
     }
 
-    console.log(`🔄 Store: Fetching transactions for ${monthKey}`);
     
     // Setear loading state para este mes
     set(state => ({
@@ -102,7 +98,6 @@ export const useTransactionStore = create<TransactionStore>((set, get) => ({
       const { startDate, endDate } = getDateRange(date);
       const transactionData = await fetchAllTransactions(accessToken, startDate, endDate);
       
-      console.log(`✅ Store: Loaded ${transactionData.length} transactions for ${monthKey}`);
       
       // Guardar en cache
       set(state => ({
@@ -131,7 +126,6 @@ export const useTransactionStore = create<TransactionStore>((set, get) => ({
 
   // Limpiar cache (útil para testing o logout)
   clearCache: () => {
-    console.log('🧹 Store: Clearing transaction cache');
     set({
       transactionsByMonth: {},
       loadingByMonth: {},
@@ -146,7 +140,6 @@ export const useTransactionStore = create<TransactionStore>((set, get) => ({
     
     // Solo agregar si ya tenemos datos para ese mes en cache
     if (transactionsByMonth[monthKey]) {
-      console.log(`➕ Store: Adding transaction to cache for ${monthKey}`);
       set(state => ({
         transactionsByMonth: {
           ...state.transactionsByMonth,
@@ -163,7 +156,6 @@ export const useTransactionStore = create<TransactionStore>((set, get) => ({
     
     // Solo remover si ya tenemos datos para ese mes en cache
     if (transactionsByMonth[monthKey]) {
-      console.log(`➖ Store: Removing transaction from cache for ${monthKey}`);
       set(state => ({
         transactionsByMonth: {
           ...state.transactionsByMonth,

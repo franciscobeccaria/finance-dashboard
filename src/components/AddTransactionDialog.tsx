@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface Budget {
   id: string;
@@ -59,7 +60,7 @@ export function AddTransactionDialog({
 
   const handleSave = async () => {
     if (!merchant || !amount || !selectedBudgetId || !date) {
-      alert("Por favor completa todos los campos");
+      toast.error("Por favor completa todos los campos");
       return;
     }
 
@@ -83,7 +84,7 @@ export function AddTransactionDialog({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving transaction:', error);
-      alert("Error al guardar la transacción");
+      toast.error("Error al guardar la transacción");
     } finally {
       setIsLoading(false);
     }

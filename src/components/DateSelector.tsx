@@ -133,9 +133,7 @@ function MonthYearPicker({ selectedDate, onDateChange }: MonthYearPickerProps) {
    */
   const handleMonthSelect = (monthIndex: number) => {
     try {
-      console.log('🗓️ MonthYearPicker: Selecting month', monthIndex, 'year', currentYear);
       const newDate = new Date(currentYear, monthIndex, 1);
-      console.log('🗓️ MonthYearPicker: Created new date', newDate.toLocaleDateString('es-ES'));
       onDateChange(newDate);
     } catch (error) {
       console.error('❌ MonthYearPicker: Error selecting month:', error);

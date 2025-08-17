@@ -97,11 +97,9 @@ export default function Home() {
   
   // Handle date change - now uses store
   const handleDateChange = async (newDate: Date) => {
-    console.log('📅 Page: Date changed to:', newDate.toLocaleDateString('es-ES'));
     
     const extendedSession = session as typeof session & ExtendedSession;
     if (!extendedSession?.accessToken) {
-      console.log('⚠️ Page: No access token available for date change');
       return;
     }
     
@@ -176,7 +174,6 @@ export default function Home() {
     const extendedSession = session as typeof session & ExtendedSession;
     if (!extendedSession?.accessToken) return;
     
-    console.log('🔄 Categorizing transaction:', { transactionId, budgetId, budgetName, description });
     
     // Store original state for rollback if needed
     const originalTransaction = uiTransactions.find(t => t.id === transactionId);
@@ -204,7 +201,6 @@ export default function Home() {
         description
       );
       
-      console.log('✅ Category updated successfully');
       
     } catch (error) {
       console.error('❌ Failed to update category:', error);
@@ -227,7 +223,6 @@ export default function Home() {
     const extendedSession = session as typeof session & ExtendedSession;
     if (!extendedSession?.accessToken) return;
     
-    console.log('🗑️ Deleting transaction:', transactionId);
     
     // Store original state for rollback if needed
     const originalTransaction = uiTransactions.find(t => t.id === transactionId);
@@ -239,7 +234,6 @@ export default function Home() {
       // Delete from backend
       await deleteTransaction(extendedSession.accessToken, transactionId);
       
-      console.log('✅ Transaction deleted successfully');
       
       // Remove from store cache (needs transaction date for month key)
       const deletedTransaction = transactions.find(t => t.id === transactionId);
@@ -357,7 +351,6 @@ export default function Home() {
     if (!extendedSession?.accessToken) return;
 
     try {
-      console.log('🔄 Creating transaction:', transaction);
       
       // Create transaction via API
       const createdTransaction = await createTransaction(extendedSession.accessToken, {
@@ -370,7 +363,6 @@ export default function Home() {
         source: 'Manual'
       });
       
-      console.log('✅ Transaction created:', createdTransaction);
       
       // Add the new transaction to store cache
       addTransactionToCache(createdTransaction, transaction.date);
@@ -383,9 +375,6 @@ export default function Home() {
   
   // Transform API transactions to UI format when API data changes
   useEffect(() => {
-    console.log('🔍 All transactions before filter:', transactions);
-    console.log('🔍 Sample transaction structure:', transactions[0]);
-    console.log('🔍 Selected date:', selectedDate.toLocaleDateString('es-ES'));
     
     const transformedTransactions = transactions
       .filter(t => t.transaction_type === 'expense') // Fix: backend uses transaction_type, not type
@@ -417,35 +406,9 @@ export default function Home() {
         };
       });
     
-    console.log('🔍 Expense transactions after filter:', transformedTransactions.length);
-    console.log('🔄 Transformed transactions for UI:', transformedTransactions);
     setUiTransactions(transformedTransactions);
   }, [transactions, budgets]);
 
-  // Fetch transactions from API
-  // TODO: Temporarily commented out - will be re-enabled after auth implementation
-  /* useEffect(() => {
-    const getTransactions = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const data = await fetchTransactions();
-        setTransactions(data);
-        console.log('Transactions loaded:', data.length);
-        if (data.length > 0) {
-          console.log('Sample transaction:', data[0]);
-        }
-      } catch (err: unknown) {
-        console.error('Error fetching transactions:', err);
-        setError(err instanceof Error ? err.message : 'Error desconocido');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    getTransactions();
-  }, []); */
   
   // Track if data has been loaded to prevent unnecessary refetches
   const [hasLoadedData, setHasLoadedData] = useState(false);
@@ -472,7 +435,6 @@ export default function Home() {
 
       // Skip if data already loaded and we have valid data (unless it's a fresh login)
       if (hasLoadedData && budgets.length > 0 && !isLoading) {
-        console.log('🚫 Skipping refetch - data already loaded');
         return;
       }
 
@@ -480,12 +442,10 @@ export default function Home() {
       setError(null);
       
       try {
-        console.log('🔑 Loading user data with Google token...');
         
         // Load budgets
         const budgetData = await fetchBudgets(extendedSession.accessToken);
         setBudgets(budgetData);
-        console.log('✅ Budgets loaded:', budgetData.length);
         
         // Load transactions for current month using store
         await fetchTransactionsForMonth(extendedSession.accessToken, selectedDate);
@@ -493,7 +453,6 @@ export default function Home() {
         setHasLoadedData(true);
         
         if (budgetData.length > 0) {
-          console.log('📊 Sample budget:', budgetData[0]);
         }
       } catch (err: unknown) {
         console.error('❌ Error initializing user data:', err);
@@ -574,12 +533,6 @@ export default function Home() {
                 spent={(() => {
                   const filteredTransactions = uiTransactions.filter(t => !isMovimientosTransaction(t, allCategories));
                   const spent = filteredTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
-                  console.log('💰 TotalBudgetCard calculation:', {
-                    totalTransactions: uiTransactions.length,
-                    filteredTransactions: filteredTransactions.length,
-                    movimientosExcluded: uiTransactions.length - filteredTransactions.length,
-                    totalSpent: spent
-                  });
                   return spent;
                 })()}
                 total={displayBudgets.reduce((sum, budget) => sum + budget.total, 0)}

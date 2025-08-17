@@ -26,7 +26,7 @@ import { formatCurrency } from "@/lib/utils";
 import { getPaymentMethodColor } from "@/lib/paymentMethodColors";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, X, Trash2 } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 
 interface Transaction {
   id: string;
@@ -68,8 +68,6 @@ export function ViewTransactionsDialog({
 }: ViewTransactionsDialogProps) {
   const [categoryFilter, setCategoryFilter] = useState<string | null>("all");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string | null>("all");
-  // Usamos Set para manejar múltiples transacciones en edición simultáneamente
-  const [editingDescriptionIds, setEditingDescriptionIds] = useState<Set<string>>(new Set());
   // Estado para manejar las descripciones temporales mientras se editan
   const [tempDescriptions, setTempDescriptions] = useState<Record<string, string>>({});
   
@@ -98,54 +96,36 @@ export function ViewTransactionsDialog({
     });
   }, [transactions, categoryFilter, paymentMethodFilter]);
 
-  // Función para alternar el estado de edición de la descripción
-  const toggleDescriptionEdit = (id: string, currentDescription?: string) => {
-    setEditingDescriptionIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-        // Limpiar descripción temporal al cancelar
-        setTempDescriptions(prev => {
-          const newTemp = { ...prev };
-          delete newTemp[id];
-          return newTemp;
-        });
-      } else {
-        newSet.add(id);
-        // Inicializar descripción temporal
-        setTempDescriptions(prev => ({
-          ...prev,
-          [id]: currentDescription || ''
-        }));
-      }
-      return newSet;
-    });
+  // Función para inicializar descripción temporal cuando el usuario enfoca el input
+  const initializeTempDescription = (id: string, currentDescription?: string) => {
+    if (!tempDescriptions.hasOwnProperty(id)) {
+      setTempDescriptions(prev => ({
+        ...prev,
+        [id]: currentDescription || ''
+      }));
+    }
   };
 
-  // TODO: Fix description editing flow - input should reappear on hover after unfocus
-  // Currently the input doesn't reappear consistently when hovering after blur
-  // Need to review the conditional logic for editingDescriptionIds state management
-  
+  // Función para limpiar descripción (botón X)
+  const clearDescription = (transactionId: string) => {
+    const transaction = transactions.find(t => t.id === transactionId);
+    if (transaction) {
+      // Limpiar descripción en backend
+      onCategorize(transactionId, transaction.budgetId, transaction.budget, "");
+      // Limpiar estado temporal
+      setTempDescriptions(prev => ({
+        ...prev,
+        [transactionId]: ''
+      }));
+    }
+  };
+
   // Función para guardar la descripción
   const saveDescription = (transactionId: string, description: string) => {
     const transaction = transactions.find(t => t.id === transactionId);
     if (transaction) {
       // Llamar a onCategorize con la descripción actualizada
       onCategorize(transactionId, transaction.budgetId, transaction.budget, description);
-      
-      // Salir del modo de edición
-      setEditingDescriptionIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(transactionId);
-        return newSet;
-      });
-      
-      // Limpiar descripción temporal
-      setTempDescriptions(prev => {
-        const newTemp = { ...prev };
-        delete newTemp[transactionId];
-        return newTemp;
-      });
     }
   };
 
@@ -242,68 +222,61 @@ export function ViewTransactionsDialog({
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <div className="flex items-center gap-2 relative">
+                        {/* Store name - always visible */}
+                        <div className="flex items-center gap-2">
                           <span className="font-medium">{transaction.store}</span>
-                          {!editingDescriptionIds.has(transaction.id) && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-5 w-5 p-0 text-blue-500 flex items-center justify-center rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
-                              onClick={() => toggleDescriptionEdit(transaction.id, transaction.description)}
-                              title={transaction.description ? "Editar descripción" : "Añadir descripción"}
-                            >
-                              <PlusCircle className="h-3 w-3" />
-                            </Button>
-                          )}
                         </div>
-                        {editingDescriptionIds.has(transaction.id) ? (
-                          <div className="flex items-center gap-2 mt-1">
-                            <Input
-                              className="h-6 text-xs bg-transparent border-transparent shadow-none sm:group-hover:bg-background sm:group-hover:border-input sm:group-hover:shadow-sm transition-all"
-                              placeholder="Añadir descripción..."
-                              value={tempDescriptions[transaction.id] || ''}
-                              onChange={(e) => {
+                        
+                        {/* Description input - always visible, responsive layout */}
+                        <div className="flex items-center gap-2 mt-1 w-full">
+                          <Input
+                            className="h-6 text-xs bg-transparent border-transparent shadow-none hover:bg-background hover:border-input hover:shadow-sm transition-all flex-1"
+                            placeholder="Añadir descripción..."
+                            value={tempDescriptions[transaction.id] !== undefined 
+                              ? tempDescriptions[transaction.id] 
+                              : transaction.description || ''
+                            }
+                            onFocus={() => initializeTempDescription(transaction.id, transaction.description)}
+                            onChange={(e) => {
+                              setTempDescriptions(prev => ({
+                                ...prev,
+                                [transaction.id]: e.target.value
+                              }));
+                            }}
+                            onBlur={() => {
+                              const description = tempDescriptions[transaction.id]?.trim();
+                              if (description !== transaction.description) {
+                                saveDescription(transaction.id, description || '');
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const description = tempDescriptions[transaction.id]?.trim();
+                                saveDescription(transaction.id, description || '');
+                                e.currentTarget.blur();
+                              } else if (e.key === 'Escape') {
+                                // Revertir a valor original
                                 setTempDescriptions(prev => ({
                                   ...prev,
-                                  [transaction.id]: e.target.value
+                                  [transaction.id]: transaction.description || ''
                                 }));
-                              }}
-                              onBlur={() => {
-                                const description = tempDescriptions[transaction.id]?.trim();
-                                if (description) {
-                                  saveDescription(transaction.id, description);
-                                } else {
-                                  // Cancelar si está vacío
-                                  toggleDescriptionEdit(transaction.id);
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  const description = tempDescriptions[transaction.id]?.trim();
-                                  if (description) {
-                                    saveDescription(transaction.id, description);
-                                  }
-                                } else if (e.key === 'Escape') {
-                                  toggleDescriptionEdit(transaction.id);
-                                }
-                              }}
-                              autoFocus
-                            />
+                                e.currentTarget.blur();
+                              }
+                            }}
+                          />
+                          {/* Clear button - only visible when there's content */}
+                          {(tempDescriptions[transaction.id] || transaction.description) && (
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="h-5 w-5 p-0 text-gray-400 flex items-center justify-center rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
-                              onClick={() => toggleDescriptionEdit(transaction.id)}
-                              title="Cancelar"
+                              className="h-5 w-5 p-0 text-gray-400 hover:text-red-500 flex items-center justify-center rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity flex-shrink-0"
+                              onClick={() => clearDescription(transaction.id)}
+                              title="Eliminar descripción"
                             >
                               <X className="h-3 w-3" />
                             </Button>
-                          </div>
-                        ) : transaction.description && (
-                          <div className="flex items-center gap-2 relative">
-                            <span className="text-xs text-gray-500">{transaction.description}</span>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
