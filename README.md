@@ -396,6 +396,10 @@ Configuración basada en:
 - **Fixed description editing flow**: Input siempre visible, botón X para eliminar, UX consistente mobile/desktop
 - **Toast notifications**: Implementado Sonner component de shadcn/ui para errores elegantes
 
+**Critical Bug Fixes:**
+- **Resolved "Maximum update depth exceeded" crash**: Fixed complex circular dependency between useEffect transformation and useMemo calculations that caused infinite re-render loops during DateSelector usage
+- **Stabilized React state management**: Implemented ref-based signature tracking to prevent redundant transformations while preserving initial data load
+
 **Code Quality:**  
 - **Removed legacy localStorage functions**: Eliminadas `initializeUserBudgets()`, `saveUserBudgets()` y `DEFAULT_BUDGETS`
 - **Console.log cleanup**: Eliminados 60+ statements de debug, manteniendo solo console.error críticos

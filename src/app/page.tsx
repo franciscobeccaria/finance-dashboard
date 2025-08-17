@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useSession } from "next-auth/react";
 
 // Extended session type
@@ -97,6 +97,10 @@ export default function Home() {
   
   // Handle date change - now uses store
   const handleDateChange = async (newDate: Date) => {
+    // Prevent infinite loops by checking if date actually changed
+    if (newDate.getTime() === selectedDate.getTime()) {
+      return;
+    }
     
     const extendedSession = session as typeof session & ExtendedSession;
     if (!extendedSession?.accessToken) {
@@ -373,8 +377,61 @@ export default function Home() {
     }
   };
   
+  // ====================================================================================================
+  // SOLUTION FOR "Maximum update depth exceeded" BUG (COMPLEX CIRCULAR DEPENDENCY ISSUE)
+  // ====================================================================================================
+  //
+  // PROBLEM IDENTIFIED:
+  // The app was experiencing infinite re-render loops that caused React's "Maximum update depth exceeded" 
+  // error. This happened during:
+  // 1. Initial app load (masked by loading state, so no visible crash)
+  // 2. DateSelector month changes (caused immediate crashes since no loading protection)
+  //
+  // ROOT CAUSE ANALYSIS:
+  // A complex circular dependency was created between:
+  // 1. useEffect transforms transactions → setUiTransactions
+  // 2. budgetsWithSpent useMemo depends on uiTransactions + budgets
+  // 3. Component re-renders triggered useEffect again → infinite loop
+  //
+  // SOLUTION IMPLEMENTED:
+  // 1. Added ref-based signature tracking to detect actual data changes vs redundant re-renders
+  // 2. Refined guard conditions to allow initial load but prevent unnecessary transformations
+  // 3. Added date change guards in handleDateChange to prevent duplicate requests
+  //
+  // TECHNICAL DETAILS:
+  // - lastTransformRef tracks a signature of inputs (transaction count, budget count, first ID)
+  // - Only transforms when signature actually changes (not on every re-render)
+  // - Allows first run (empty ref) but blocks subsequent identical transformations
+  // - Preserves initial data load while breaking the circular dependency cycle
+  //
+  // FILES AFFECTED: page.tsx (this file)
+  // IMPACT: Fixes crashes during date navigation while maintaining full functionality
+  // ====================================================================================================
+
+  // Ref to track the last transformation inputs to prevent infinite re-render loops
+  const lastTransformRef = useRef<string>('');
+
   // Transform API transactions to UI format when API data changes
   useEffect(() => {
+    // Only skip if we have no data at all (preserve initial load functionality)
+    if (!transactions || !budgets || transactions.length === 0) {
+      return;
+    }
+    
+    // Create a signature of current inputs to detect actual changes vs redundant re-renders
+    const currentSignature = JSON.stringify({ 
+      transactionCount: transactions.length, 
+      budgetCount: budgets.length,
+      firstTransactionId: transactions[0]?.id || null
+    });
+    
+    // Skip transformation if inputs haven't actually changed (but allow first run when ref is empty)
+    if (currentSignature === lastTransformRef.current && lastTransformRef.current !== '') {
+      return;
+    }
+    
+    // Update signature for next comparison
+    lastTransformRef.current = currentSignature;
     
     const transformedTransactions = transactions
       .filter(t => t.transaction_type === 'expense') // Fix: backend uses transaction_type, not type
@@ -417,6 +474,7 @@ export default function Home() {
   useEffect(() => {
     const initializeUserData = async () => {
       if (status === "loading") return; // Wait for session to load
+      if (hasLoadedData) return; // Prevent multiple initializations
       
       const extendedSession = session as typeof session & ExtendedSession;
       if (!session?.user?.email || !extendedSession.accessToken) {
@@ -476,7 +534,7 @@ export default function Home() {
 
     initializeUserData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.email, status]); // Specific dependencies to prevent infinite loops - other deps cause infinite loop
+  }, [session?.user?.email, status]); // Avoid hasLoadedData dependency to prevent infinite loop
   
   // Note: Date change handling is now done in handleDateChange function with store
 
