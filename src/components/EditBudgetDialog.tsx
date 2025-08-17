@@ -99,25 +99,25 @@ export function EditBudgetDialog({
             </div>
           )}
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+            <Label htmlFor="name" className="text-left sm:text-right">
               Nombre
             </Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="col-span-3"
+              className="sm:col-span-3"
               placeholder="Ej: Supermercado, Restaurantes, etc."
               autoFocus
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="total" className="text-right">
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+            <Label htmlFor="total" className="text-left sm:text-right">
               Monto Total
             </Label>
-            <div className="relative col-span-3">
+            <div className="relative sm:col-span-3">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                 $
               </span>
@@ -135,24 +135,24 @@ export function EditBudgetDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex justify-between">
+        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between gap-2">
           {isEditing && onDelete && (
             <Button
               variant="destructive"
               onClick={handleDelete}
-              className="mr-auto"
+              className="w-full sm:w-auto sm:mr-auto"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Eliminar
             </Button>
           )}
-          <div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-0">
             <DialogClose asChild>
-              <Button type="button" variant="outline" className="mr-2">
+              <Button type="button" variant="outline" className="w-full sm:w-auto sm:mr-2">
                 Cancelar
               </Button>
             </DialogClose>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} className="w-full sm:w-auto">
               {isEditing ? "Guardar" : <><Plus className="h-4 w-4 mr-2" />Crear</>}
             </Button>
           </div>

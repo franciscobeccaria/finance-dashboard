@@ -622,7 +622,7 @@ export default function Home() {
                 />
                 <button 
                   onClick={() => handleEditBudget(budget)}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white p-1 rounded-full"
+                  className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-white p-1 rounded-full"
                 >
                   <Edit className="h-4 w-4 text-gray-500" />
                 </button>

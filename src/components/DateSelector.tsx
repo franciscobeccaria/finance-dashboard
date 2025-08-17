@@ -43,14 +43,14 @@ export function DateSelector({ selectedDate, onDateChange, isLoading = false }: 
   };
 
   return (
-    <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-1 shadow-sm">
+    <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-1 sm:px-2 py-1 shadow-sm w-full sm:max-w-full sm:w-auto">
       {/* Previous Month Button */}
       <Button
         variant="ghost"
         size="sm"
         onClick={goToPreviousMonth}
         disabled={isLoading}
-        className="h-8 w-8 p-0 hover:bg-gray-100"
+        className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-gray-100 flex-shrink-0"
       >
         <ChevronLeft className="h-4 w-4 text-gray-600" />
         <span className="sr-only">Mes anterior</span>
@@ -63,14 +63,14 @@ export function DateSelector({ selectedDate, onDateChange, isLoading = false }: 
             variant="ghost"
             size="sm"
             disabled={isLoading}
-            className="h-8 px-3 font-medium text-gray-700 hover:bg-gray-100 text-sm min-w-[120px] justify-center"
+            className="h-7 sm:h-8 px-2 sm:px-3 font-medium text-gray-700 hover:bg-gray-100 text-xs sm:text-sm min-w-0 justify-center flex-1 sm:flex-shrink sm:max-w-none sm:min-w-[120px]"
           >
             {isLoading ? (
               <div className="h-4 w-4 border-2 border-t-transparent border-gray-400 rounded-full animate-spin mr-2" />
             ) : (
-              <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-gray-500 flex-shrink-0" />
             )}
-            {formatDisplayDate(selectedDate)}
+            <span className="truncate">{formatDisplayDate(selectedDate)}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="center">
@@ -87,7 +87,7 @@ export function DateSelector({ selectedDate, onDateChange, isLoading = false }: 
         size="sm"
         onClick={goToNextMonth}
         disabled={isLoading}
-        className="h-8 w-8 p-0 hover:bg-gray-100"
+        className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-gray-100 flex-shrink-0"
       >
         <ChevronRight className="h-4 w-4 text-gray-600" />
         <span className="sr-only">Mes siguiente</span>

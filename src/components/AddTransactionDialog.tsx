@@ -96,20 +96,20 @@ export function AddTransactionDialog({
           <DialogTitle className="text-xl text-blue-700">Añadir Transacción</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <label htmlFor="comercio" className="text-right text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+            <label htmlFor="comercio" className="text-left sm:text-right text-sm">
               Comercio
             </label>
             <Input
               id="comercio"
               placeholder="Nombre del comercio"
-              className="col-span-3"
+              className="sm:col-span-3"
               value={merchant}
               onChange={(e) => setMerchant(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <label htmlFor="monto" className="text-right text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+            <label htmlFor="monto" className="text-left sm:text-right text-sm">
               Monto
             </label>
             <Input
@@ -117,16 +117,16 @@ export function AddTransactionDialog({
               type="number"
               step="0.01"
               placeholder="0 (negativos para reembolsos)"
-              className="col-span-3"
+              className="sm:col-span-3"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <label htmlFor="presupuesto" className="text-right text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+            <label htmlFor="presupuesto" className="text-left sm:text-right text-sm">
               Presupuesto
             </label>
-            <div className="col-span-3">
+            <div className="sm:col-span-3">
               <Select value={selectedBudgetId} onValueChange={setSelectedBudgetId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar presupuesto" />
@@ -149,11 +149,11 @@ export function AddTransactionDialog({
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <label htmlFor="fecha" className="text-right text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+            <label htmlFor="fecha" className="text-left sm:text-right text-sm">
               Fecha
             </label>
-            <div className="col-span-3">
+            <div className="sm:col-span-3">
               <div className="relative">
                 <Button
                   variant="outline"
@@ -179,11 +179,11 @@ export function AddTransactionDialog({
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <label htmlFor="hora" className="text-right text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+            <label htmlFor="hora" className="text-left sm:text-right text-sm">
               Hora
             </label>
-            <div className="col-span-3">
+            <div className="sm:col-span-3">
               <div className="flex items-center">
                 <Clock className="mr-2 h-4 w-4 text-gray-400" />
                 <Input
@@ -197,11 +197,11 @@ export function AddTransactionDialog({
             </div>
           </div>
         </div>
-        <DialogFooter className="sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button type="submit" onClick={handleSave} disabled={isLoading}>
+          <Button type="submit" onClick={handleSave} disabled={isLoading} className="w-full sm:w-auto">
             {isLoading ? "Guardando..." : "Guardar"}
           </Button>
         </DialogFooter>

@@ -153,7 +153,7 @@ export function ViewTransactionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-y-auto w-full">
+      <DialogContent className="sm:max-w-[1000px] max-w-[95vw] max-h-[85vh] overflow-y-auto w-full">
         <DialogHeader>
           <DialogTitle>Transacciones</DialogTitle>
           <DialogDescription>
@@ -161,15 +161,15 @@ export function ViewTransactionsDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex items-center justify-between gap-2 mb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
             {/* Filtro de categoría */}
             <div className="flex items-center gap-2">
               <Select
                 value={categoryFilter || "all"}
                 onValueChange={(value) => setCategoryFilter(value)}
               >
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="Todas las categorías" />
                 </SelectTrigger>
                 <SelectContent>
@@ -201,7 +201,7 @@ export function ViewTransactionsDialog({
                 value={paymentMethodFilter || "all"}
                 onValueChange={(value) => setPaymentMethodFilter(value)}
               >
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="Todos los medios" />
                 </SelectTrigger>
                 <SelectContent>
@@ -221,15 +221,16 @@ export function ViewTransactionsDialog({
           </div>
         </div>
         
-        <div>
-          <Table>
+        <div className="overflow-x-auto">
+          <Table className="w-full">
             <TableHeader>
               <TableRow>
-                <TableHead>Fecha</TableHead>
+                <TableHead className="w-24">Fecha</TableHead>
                 <TableHead>Comercio</TableHead>
-                <TableHead>Monto</TableHead>
-                <TableHead>Medio de Pago</TableHead>
+                <TableHead className="w-20">Monto</TableHead>
+                <TableHead className="w-28">Medio de Pago</TableHead>
                 <TableHead>Presupuesto</TableHead>
+                <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -247,7 +248,7 @@ export function ViewTransactionsDialog({
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="h-5 w-5 p-0 text-blue-500 flex items-center justify-center rounded-full sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
+                              className="h-5 w-5 p-0 text-blue-500 flex items-center justify-center rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
                               onClick={() => toggleDescriptionEdit(transaction.id, transaction.description)}
                               title={transaction.description ? "Editar descripción" : "Añadir descripción"}
                             >
@@ -291,7 +292,7 @@ export function ViewTransactionsDialog({
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="h-5 w-5 p-0 text-gray-400 flex items-center justify-center rounded-full sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
+                              className="h-5 w-5 p-0 text-gray-400 flex items-center justify-center rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity"
                               onClick={() => toggleDescriptionEdit(transaction.id)}
                               title="Cancelar"
                             >
@@ -322,67 +323,66 @@ export function ViewTransactionsDialog({
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-between gap-2">
-                        <Select
-                          value={transaction.budgetId || "uncategorized"}
-                          onValueChange={(value) => {
-                            if (value === "uncategorized") {
-                              // Caso para "Sin categoría"
-                              onCategorize(transaction.id, "", "");
-                            } else {
-                              const selectedBudget = availableBudgets.find(b => b.id === value);
-                              if (selectedBudget) {
-                                onCategorize(transaction.id, value, selectedBudget.name || '');
-                              }
+                      <Select
+                        value={transaction.budgetId || "uncategorized"}
+                        onValueChange={(value) => {
+                          if (value === "uncategorized") {
+                            // Caso para "Sin categoría"
+                            onCategorize(transaction.id, "", "");
+                          } else {
+                            const selectedBudget = availableBudgets.find(b => b.id === value);
+                            if (selectedBudget) {
+                              onCategorize(transaction.id, value, selectedBudget.name || '');
                             }
-                          }}
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sin categoría">
+                            {transaction.budgetId ? transaction.budget : "Sin categoría"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="uncategorized">Sin categoría</SelectItem>
+                          {availableBudgets
+                            .sort((a, b) => {
+                              // Movimientos siempre al final
+                              if (a.isSpecial && a.name.toLowerCase() === "movimientos") return 1;
+                              if (b.isSpecial && b.name.toLowerCase() === "movimientos") return -1;
+                              // Resto alfabético
+                              return a.name.localeCompare(b.name);
+                            })
+                            .map(budget => (
+                            <SelectItem 
+                              key={budget.id} 
+                              value={budget.id}
+                              className={budget.isSpecial ? "italic text-blue-600 font-semibold" : ""}
+                            >
+                              {budget.name}{budget.isSpecial ? " (especial)" : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {/* Delete button - only for manual transactions */}
+                      {transaction.isManual && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => onDelete(transaction.id)}
+                          title="Eliminar transacción"
                         >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Sin categoría">
-                              {transaction.budgetId ? transaction.budget : "Sin categoría"}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="uncategorized">Sin categoría</SelectItem>
-                            {availableBudgets
-                              .sort((a, b) => {
-                                // Movimientos siempre al final
-                                if (a.isSpecial && a.name.toLowerCase() === "movimientos") return 1;
-                                if (b.isSpecial && b.name.toLowerCase() === "movimientos") return -1;
-                                // Resto alfabético
-                                return a.name.localeCompare(b.name);
-                              })
-                              .map(budget => (
-                              <SelectItem 
-                                key={budget.id} 
-                                value={budget.id}
-                                className={budget.isSpecial ? "italic text-blue-600 font-semibold" : ""}
-                              >
-                                {budget.name}{budget.isSpecial ? " (especial)" : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        
-                        {/* Delete button - only for manual transactions */}
-                        {transaction.isManual && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => onDelete(transaction.id)}
-                            title="Eliminar transacción"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4 text-gray-500">
+                  <TableCell colSpan={6} className="text-center py-4 text-gray-500">
                     No hay transacciones para mostrar
                   </TableCell>
                 </TableRow>
