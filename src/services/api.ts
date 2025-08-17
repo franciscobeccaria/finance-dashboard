@@ -75,11 +75,37 @@ export const DEFAULT_BUDGETS = [
 /**
  * Fetch all transactions from backend (consolidated endpoint)
  * @param accessToken - Google access token from session
+ * @param startDate - Optional start date for filtering (defaults to current month start)
+ * @param endDate - Optional end date for filtering (defaults to current month end)
  * @returns Promise with an array of transactions
  */
-export async function fetchAllTransactions(accessToken: string): Promise<BackendTransaction[]> {
+export async function fetchAllTransactions(
+  accessToken: string, 
+  startDate?: Date, 
+  endDate?: Date
+): Promise<BackendTransaction[]> {
   try {
-    const response = await fetch(`${BACKEND_URL}/transactions/all`, {
+    // Build query parameters for date filtering
+    const queryParams = new URLSearchParams();
+    
+    if (startDate) {
+      queryParams.append('startDate', startDate.toISOString().split('T')[0]); // YYYY-MM-DD format
+    }
+    
+    if (endDate) {
+      queryParams.append('endDate', endDate.toISOString().split('T')[0]); // YYYY-MM-DD format
+    }
+    
+    const queryString = queryParams.toString();
+    const url = `${BACKEND_URL}/transactions/all${queryString ? `?${queryString}` : ''}`;
+    
+    console.log('🔍 Fetching transactions with date filter:', { 
+      startDate: startDate?.toISOString().split('T')[0], 
+      endDate: endDate?.toISOString().split('T')[0],
+      url 
+    });
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -110,11 +136,35 @@ export async function fetchAllTransactions(accessToken: string): Promise<Backend
 /**
  * Fetch transactions from Gmail and store in backend (original endpoint)
  * @param accessToken - Google access token from session
+ * @param startDate - Optional start date for Gmail search (defaults to current month start)
+ * @param endDate - Optional end date for Gmail search (defaults to current month end)
  * @returns Promise with an array of transactions
  */
-export async function fetchTransactions(accessToken: string): Promise<ParsedTransaction[]> {
+export async function fetchTransactions(
+  accessToken: string, 
+  startDate?: Date, 
+  endDate?: Date
+): Promise<ParsedTransaction[]> {
+  // Generate date range if not provided (current month)
+  const now = new Date();
+  const defaultStartDate = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
+  const defaultEndDate = endDate || new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  
+  // Format dates for Gmail query (YYYY/MM/DD)
+  const formatGmailDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}/${month}/${day}`;
+  };
+  
+  const afterDate = formatGmailDate(defaultStartDate);
+  const beforeDate = formatGmailDate(defaultEndDate);
+  
+  console.log('🔍 Gmail search date range:', { afterDate, beforeDate });
+  
   const requestBody = {
-    q: '(from:"Informes Naranja X" OR from:"Aviso Santander" OR from:"belo" OR from:"Mercado Libre") subject:("Ingresó una compra" OR "Pagaste" OR "Aviso de operación" OR "Envío exitoso" OR "Retiro exitoso" OR "Recibiste tu compra") after:2025/08/01 before:2025/09/01'
+    q: `(from:"Informes Naranja X" OR from:"Aviso Santander" OR from:"belo" OR from:"Mercado Libre") subject:("Ingresó una compra" OR "Pagaste" OR "Aviso de operación" OR "Envío exitoso" OR "Retiro exitoso" OR "Recibiste tu compra") after:${afterDate} before:${beforeDate}`
   };
 
   try {

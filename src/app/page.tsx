@@ -18,7 +18,8 @@ import { EditBudgetDialog, Budget as BudgetType } from "@/components/EditBudgetD
 import { Edit } from "lucide-react";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { ViewTransactionsDialog } from "@/components/ViewTransactionsDialog";
-import { fetchAllTransactions, BackendTransaction, fetchBudgets, BudgetWithSpent, createBudget, updateBudget, deleteBudget, updateTransactionBudget, createTransaction, deleteTransaction } from "@/services/api";
+import { fetchBudgets, BudgetWithSpent, createBudget, updateBudget, deleteBudget, updateTransactionBudget, createTransaction, deleteTransaction } from "@/services/api";
+import { useTransactionStore } from "@/stores/transactionStore";
 import { LoginButton } from "@/components/LoginButton";
 
 // We're now using BudgetType from EditBudgetDialog.tsx
@@ -67,16 +68,49 @@ export default function Home() {
   const [editBudgetDialogOpen, setEditBudgetDialogOpen] = useState(false);
   const [currentEditBudget, setCurrentEditBudget] = useState<BudgetType | undefined>(undefined);
   
-  // State for API data
-  const [transactions, setTransactions] = useState<BackendTransaction[]>([]);
+  // Zustand store for transactions and date management
+  const {
+    selectedDate,
+    setSelectedDate,
+    fetchTransactionsForMonth,
+    getTransactionsForCurrentMonth,
+    isCurrentMonthLoading,
+    error: storeError,
+    addTransactionToCache,
+    removeTransactionFromCache
+  } = useTransactionStore();
+
+  // Local state for UI and budgets
+  const [uiTransactions, setUiTransactions] = useState<UITransaction[]>([]);
+  const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  // State for categorized transactions and budget calculation
-  const [uiTransactions, setUiTransactions] = useState<UITransaction[]>([]);
   
-  // State for budgets (loaded from backend)
-  const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
+  // Get transactions from store
+  const transactions = getTransactionsForCurrentMonth();
+  
+  // Combine loading states
+  const isCurrentlyLoading = isLoading || isCurrentMonthLoading();
+  
+  // Combine error states
+  const currentError = error || storeError;
+  
+  // Handle date change - now uses store
+  const handleDateChange = async (newDate: Date) => {
+    console.log('📅 Page: Date changed to:', newDate.toLocaleDateString('es-ES'));
+    
+    const extendedSession = session as typeof session & ExtendedSession;
+    if (!extendedSession?.accessToken) {
+      console.log('⚠️ Page: No access token available for date change');
+      return;
+    }
+    
+    // Update selected date in store
+    setSelectedDate(newDate);
+    
+    // Fetch transactions for new date (with cache)
+    await fetchTransactionsForMonth(extendedSession.accessToken, newDate);
+  };
   
   // Combinar presupuestos del backend con categoría especial "Movimientos" hardcodeada
   // pero evitando duplicados si el backend ya incluye "Movimientos"
@@ -207,8 +241,12 @@ export default function Home() {
       
       console.log('✅ Transaction deleted successfully');
       
-      // Also remove from backend transactions state
-      setTransactions(prev => prev.filter(t => t.id !== transactionId));
+      // Remove from store cache (needs transaction date for month key)
+      const deletedTransaction = transactions.find(t => t.id === transactionId);
+      if (deletedTransaction) {
+        const transactionDate = new Date(deletedTransaction.transaction_date);
+        removeTransactionFromCache(transactionId, transactionDate);
+      }
       
     } catch (error) {
       console.error('❌ Failed to delete transaction:', error);
@@ -300,14 +338,7 @@ export default function Home() {
         )
       );
       
-      // Also update backend transactions state to keep consistency
-      setTransactions(prev => 
-        prev.map(transaction => 
-          transaction.budget_id === budgetId 
-            ? { ...transaction, budget_id: null } 
-            : transaction
-        )
-      );
+      // Note: Store cache will be updated automatically when UI transactions change
     } catch (error) {
       console.error('Error deleting budget:', error);
       setError(error instanceof Error ? error.message : 'Error deleting budget');
@@ -341,9 +372,8 @@ export default function Home() {
       
       console.log('✅ Transaction created:', createdTransaction);
       
-      // Add the new transaction to local state 
-      // The useMemo budgetsWithSpent will automatically recalculate spent amounts
-      setTransactions(prev => [createdTransaction, ...prev]);
+      // Add the new transaction to store cache
+      addTransactionToCache(createdTransaction, transaction.date);
       
     } catch (error) {
       console.error('Error creating transaction:', error);
@@ -355,6 +385,7 @@ export default function Home() {
   useEffect(() => {
     console.log('🔍 All transactions before filter:', transactions);
     console.log('🔍 Sample transaction structure:', transactions[0]);
+    console.log('🔍 Selected date:', selectedDate.toLocaleDateString('es-ES'));
     
     const transformedTransactions = transactions
       .filter(t => t.transaction_type === 'expense') // Fix: backend uses transaction_type, not type
@@ -456,19 +487,8 @@ export default function Home() {
         setBudgets(budgetData);
         console.log('✅ Budgets loaded:', budgetData.length);
         
-        // Load transactions
-        try {
-          const transactionData = await fetchAllTransactions(extendedSession.accessToken);
-          setTransactions(transactionData);
-          console.log('✅ Transactions loaded:', transactionData.length);
-        } catch (transErr) {
-          // Re-throw authentication errors to be handled by outer catch
-          if (transErr instanceof Error && transErr.message === 'AUTHENTICATION_ERROR') {
-            throw transErr;
-          }
-          console.log('⚠️ Transactions endpoint not ready:', transErr);
-          setTransactions([]); // Set empty array to continue
-        }
+        // Load transactions for current month using store
+        await fetchTransactionsForMonth(extendedSession.accessToken, selectedDate);
         
         setHasLoadedData(true);
         
@@ -498,6 +518,8 @@ export default function Home() {
     initializeUserData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.email, status]); // Specific dependencies to prevent infinite loops - other deps cause infinite loop
+  
+  // Note: Date change handling is now done in handleDateChange function with store
 
   // Show loading screen while checking authentication
   if (status === "loading") {
@@ -534,17 +556,19 @@ export default function Home() {
           onAddTransaction={() => setAddDialogOpen(true)} 
           onCreateBudget={handleAddBudget}
           onViewTransactions={() => setViewDialogOpen(true)}
-          isLoading={isLoading}
+          selectedDate={selectedDate}
+          onDateChange={handleDateChange}
+          isLoading={isCurrentlyLoading}
         />
         
         <main>
           
           {/* Total Budget Summary Card */}
-          {isLoading ? (
+          {isCurrentlyLoading ? (
             <div className="mb-6">
               <TotalBudgetCardSkeleton />
             </div>
-          ) : !error && (
+          ) : !currentError && (
             <div className="mb-6">
               <TotalBudgetCard
                 spent={(() => {
@@ -564,7 +588,7 @@ export default function Home() {
           )}
           
           {/* Responsive grid for budget cards - adaptado según la cantidad de presupuestos */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 ${isLoading ? "lg:grid-cols-4" : displayBudgets.length === 1 
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${isCurrentlyLoading ? "lg:grid-cols-4" : displayBudgets.length === 1 
             ? "lg:grid-cols-1" 
             : displayBudgets.length === 2 
             ? "lg:grid-cols-2" 
@@ -572,7 +596,7 @@ export default function Home() {
             ? "lg:grid-cols-3" 
             : "lg:grid-cols-4"} gap-4 mb-8`}>
             {/* Estado de carga con skeletons */}
-            {isLoading && (
+            {isCurrentlyLoading && (
               <>
                 <BudgetCardSkeleton />
                 <BudgetCardSkeleton />
@@ -582,14 +606,14 @@ export default function Home() {
             )}
             
             {/* Mensaje cuando no hay presupuestos */}
-            {budgetsWithSpent.length === 0 && !isLoading && !error && (
+            {budgetsWithSpent.length === 0 && !isCurrentlyLoading && !currentError && (
               <div className="col-span-full text-center py-8 text-gray-500">
                 No se encontraron presupuestos
               </div>
             )}
             
             {/* Lista de presupuestos */}
-            {!isLoading && displayBudgets.map((budget) => (
+            {!isCurrentlyLoading && displayBudgets.map((budget) => (
               <div key={budget.id} className="relative group">
                 <BudgetCard
                   name={budget.name}

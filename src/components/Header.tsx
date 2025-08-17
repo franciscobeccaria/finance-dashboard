@@ -7,19 +7,32 @@ import {
   DropdownMenuItem 
 } from "@/components/ui/dropdown-menu";
 import { LoginButton } from "./LoginButton";
+import { DateSelector } from "./DateSelector";
 
 interface HeaderProps {
   onAddTransaction: () => void;
   onCreateBudget: () => void;
   onViewTransactions: () => void;
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
   isLoading?: boolean;
 }
 
-export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, isLoading = false }: HeaderProps) {
+export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, selectedDate, onDateChange, isLoading = false }: HeaderProps) {
   return (
     <header className="w-full py-4 px-1">
       <div className="flex justify-between items-center w-full">
         <h1 className="text-2xl font-bold text-blue-800">Presus.</h1>
+        
+        {/* Date Selector - Center */}
+        <div className="flex-1 flex justify-center">
+          <DateSelector 
+            selectedDate={selectedDate}
+            onDateChange={onDateChange}
+            isLoading={isLoading}
+          />
+        </div>
+        
         <div className="flex items-center gap-2">
           <Button 
             onClick={onViewTransactions} 
@@ -68,7 +81,7 @@ export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, i
             <span className="sr-only">Settings</span>
           </Button> */}
           
-          <LoginButton />
+          <LoginButton isAppLoading={isLoading} />
         </div>
       </div>
     </header>
