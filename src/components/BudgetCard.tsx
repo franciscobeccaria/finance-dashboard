@@ -14,13 +14,14 @@ interface BudgetCardProps {
 }
 
 export function BudgetCard({ name, spent, total }: BudgetCardProps) {
-  const percentage = Math.min(Math.round((spent / total) * 100), 100);
+  const percentage = Math.round((spent / total) * 100);
   
   // Determine the color based on percentage spent
   const getProgressColor = () => {
     if (percentage < 60) return "bg-green-500";
     if (percentage < 85) return "bg-amber-500";
-    return "bg-red-500";
+    if (percentage <= 100) return "bg-red-500";
+    return "bg-red-700"; // Darker red for over budget
   };
 
   return (
@@ -37,7 +38,7 @@ export function BudgetCard({ name, spent, total }: BudgetCardProps) {
           <div className="flex justify-between items-center">
             <p className="text-sm font-medium">{percentage}%</p>
           </div>
-          <Progress value={percentage} className={`h-2 ${getProgressColor()}`} />
+          <Progress value={Math.min(percentage, 100)} className={`h-2 ${getProgressColor()}`} />
         </div>
       </CardContent>
     </Card>
