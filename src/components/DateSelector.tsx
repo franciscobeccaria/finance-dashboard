@@ -19,14 +19,17 @@ export function DateSelector({ selectedDate, onDateChange, isLoading = false }: 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   // Helper functions for date validation
-  const getMaxAllowedDate = () => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1); // First day of current month
-  };
-
   const isDateInFuture = (date: Date) => {
-    const maxDate = getMaxAllowedDate();
-    return date.getTime() > maxDate.getTime();
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
+    const targetYear = date.getFullYear();
+    const targetMonth = date.getMonth();
+    
+    // Future if year is greater, or same year but month is greater than current
+    return targetYear > currentYear || 
+           (targetYear === currentYear && targetMonth > currentMonth);
   };
 
   const canNavigateToNextMonth = () => {
@@ -126,11 +129,6 @@ function MonthYearPicker({ selectedDate, onDateChange }: MonthYearPickerProps) {
   // Helper functions for date validation
   const MIN_ALLOWED_YEAR = 2022; // Product decision: no data before 2022
   
-  const getMaxAllowedDate = () => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1); // First day of current month
-  };
-
   const canNavigateToNextYear = () => {
     const now = new Date();
     return currentYear < now.getFullYear();
@@ -141,9 +139,13 @@ function MonthYearPicker({ selectedDate, onDateChange }: MonthYearPickerProps) {
   };
 
   const isMonthDisabled = (monthIndex: number, year: number) => {
-    const testDate = new Date(year, monthIndex, 1);
-    const maxDate = getMaxAllowedDate();
-    return testDate.getTime() > maxDate.getTime();
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
+    // Future if year is greater, or same year but month is greater than current
+    return year > currentYear || 
+           (year === currentYear && monthIndex > currentMonth);
   };
   
   const months = [
