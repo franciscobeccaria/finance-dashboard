@@ -70,6 +70,17 @@ export function ViewTransactionsDialog({
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string | null>("all");
   // Estado para manejar las descripciones temporales mientras se editan
   const [tempDescriptions, setTempDescriptions] = useState<Record<string, string>>({});
+
+  // Helper function to get category display colors
+  const getCategoryDisplayColor = (budgetId: string | null, budgetName: string, isSpecial?: boolean) => {
+    if (!budgetId) {
+      return "text-red-600 font-medium"; // Sin categoría - llamativo (rojo)
+    }
+    if (isSpecial && budgetName.toLowerCase() === "movimientos") {
+      return "text-gray-600 italic"; // Movimientos - sutil pero distinguible
+    }
+    return ""; // Categorías normales sin color especial
+  };
   
   // Get unique payment methods from transactions
   const uniquePaymentMethods = useMemo(() => {
@@ -166,7 +177,7 @@ export function ViewTransactionsDialog({
                     <SelectItem 
                       key={budget.id} 
                       value={budget.id}
-                      className={budget.isSpecial ? "italic text-blue-600 font-semibold" : ""}
+                      className={getCategoryDisplayColor(budget.id, budget.name, budget.isSpecial)}
                     >
                       {budget.name}{budget.isSpecial ? " (especial)" : ""}
                     </SelectItem>
@@ -312,11 +323,19 @@ export function ViewTransactionsDialog({
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Sin categoría">
-                            {transaction.budgetId ? transaction.budget : "Sin categoría"}
+                            <span className={getCategoryDisplayColor(
+                              transaction.budgetId, 
+                              transaction.budget,
+                              availableBudgets.find(b => b.id === transaction.budgetId)?.isSpecial
+                            )}>
+                              {transaction.budgetId ? transaction.budget : "Sin categoría"}
+                            </span>
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="uncategorized">Sin categoría</SelectItem>
+                          <SelectItem value="uncategorized" className="text-red-600 font-medium">
+                            Sin categoría
+                          </SelectItem>
                           {availableBudgets
                             .sort((a, b) => {
                               // Movimientos siempre al final
@@ -329,7 +348,7 @@ export function ViewTransactionsDialog({
                             <SelectItem 
                               key={budget.id} 
                               value={budget.id}
-                              className={budget.isSpecial ? "italic text-blue-600 font-semibold" : ""}
+                              className={getCategoryDisplayColor(budget.id, budget.name, budget.isSpecial)}
                             >
                               {budget.name}{budget.isSpecial ? " (especial)" : ""}
                             </SelectItem>

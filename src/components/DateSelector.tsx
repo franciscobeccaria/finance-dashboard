@@ -18,6 +18,23 @@ interface DateSelectorProps {
 export function DateSelector({ selectedDate, onDateChange, isLoading = false }: DateSelectorProps) {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
+  // Helper functions for date validation
+  const getMaxAllowedDate = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1); // First day of current month
+  };
+
+  const isDateInFuture = (date: Date) => {
+    const maxDate = getMaxAllowedDate();
+    return date.getTime() > maxDate.getTime();
+  };
+
+  const canNavigateToNextMonth = () => {
+    const nextMonth = new Date(selectedDate);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    return !isDateInFuture(nextMonth);
+  };
+
   // Helper functions for navigation
   const goToPreviousMonth = () => {
     const newDate = new Date(selectedDate);
@@ -26,6 +43,7 @@ export function DateSelector({ selectedDate, onDateChange, isLoading = false }: 
   };
 
   const goToNextMonth = () => {
+    if (!canNavigateToNextMonth()) return;
     const newDate = new Date(selectedDate);
     newDate.setMonth(newDate.getMonth() + 1);
     onDateChange(newDate);
@@ -73,7 +91,7 @@ export function DateSelector({ selectedDate, onDateChange, isLoading = false }: 
             <span className="truncate">{formatDisplayDate(selectedDate)}</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="center">
+        <PopoverContent className="w-auto p-0 rounded-lg shadow-lg border border-gray-200" align="center">
           <MonthYearPicker
             selectedDate={selectedDate}
             onDateChange={handleDateSelect}
@@ -86,8 +104,8 @@ export function DateSelector({ selectedDate, onDateChange, isLoading = false }: 
         variant="ghost"
         size="sm"
         onClick={goToNextMonth}
-        disabled={isLoading}
-        className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-gray-100 flex-shrink-0"
+        disabled={isLoading || !canNavigateToNextMonth()}
+        className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-gray-100 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <ChevronRight className="h-4 w-4 text-gray-600" />
         <span className="sr-only">Mes siguiente</span>
@@ -104,6 +122,29 @@ interface MonthYearPickerProps {
 
 function MonthYearPicker({ selectedDate, onDateChange }: MonthYearPickerProps) {
   const [currentYear, setCurrentYear] = useState(selectedDate.getFullYear());
+
+  // Helper functions for date validation
+  const MIN_ALLOWED_YEAR = 2022; // Product decision: no data before 2022
+  
+  const getMaxAllowedDate = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1); // First day of current month
+  };
+
+  const canNavigateToNextYear = () => {
+    const now = new Date();
+    return currentYear < now.getFullYear();
+  };
+
+  const canNavigateToPreviousYear = () => {
+    return currentYear > MIN_ALLOWED_YEAR;
+  };
+
+  const isMonthDisabled = (monthIndex: number, year: number) => {
+    const testDate = new Date(year, monthIndex, 1);
+    const maxDate = getMaxAllowedDate();
+    return testDate.getTime() > maxDate.getTime();
+  };
   
   const months = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -133,6 +174,9 @@ function MonthYearPicker({ selectedDate, onDateChange }: MonthYearPickerProps) {
    */
   const handleMonthSelect = (monthIndex: number) => {
     try {
+      // Prevent selection of disabled months
+      if (isMonthDisabled(monthIndex, currentYear)) return;
+      
       const newDate = new Date(currentYear, monthIndex, 1);
       onDateChange(newDate);
     } catch (error) {
@@ -144,42 +188,48 @@ function MonthYearPicker({ selectedDate, onDateChange }: MonthYearPickerProps) {
   const currentSelectedYear = selectedDate.getFullYear();
 
   return (
-    <div className="p-4 bg-white">
+    <div className="p-6 bg-white rounded-lg">
       {/* Year Navigation */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setCurrentYear(currentYear - 1)}
-          className="h-8 w-8 p-0"
+          disabled={!canNavigateToPreviousYear()}
+          className="h-9 w-9 p-0 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h3 className="text-lg font-semibold">{currentYear}</h3>
+        <h3 className="text-lg font-semibold text-gray-800">{currentYear}</h3>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setCurrentYear(currentYear + 1)}
-          className="h-8 w-8 p-0"
+          disabled={!canNavigateToNextYear()}
+          className="h-9 w-9 p-0 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Month Grid */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-3">
         {months.map((month, index) => {
           const isSelected = currentSelectedYear === currentYear && currentMonth === index;
+          const isDisabled = isMonthDisabled(index, currentYear);
           return (
             <Button
               key={index}
               variant={isSelected ? "default" : "ghost"}
               size="sm"
               onClick={() => handleMonthSelect(index)}
-              className={`h-10 text-sm ${
+              disabled={isDisabled}
+              className={`h-12 w-full min-w-[60px] text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center border ${
                 isSelected 
-                  ? "bg-blue-600 text-white hover:bg-blue-700" 
-                  : "hover:bg-gray-100"
+                  ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md border-transparent" 
+                  : isDisabled
+                  ? "opacity-40 cursor-not-allowed text-gray-400 bg-gray-50 hover:bg-gray-50 hover:opacity-40 border-transparent"
+                  : "hover:bg-gray-100 hover:shadow-sm border-transparent hover:border-gray-200"
               }`}
             >
               {month}
@@ -187,6 +237,15 @@ function MonthYearPicker({ selectedDate, onDateChange }: MonthYearPickerProps) {
           );
         })}
       </div>
+      
+      {/* Date Range Info - Only show when at minimum year */}
+      {currentYear === MIN_ALLOWED_YEAR && (
+        <div className="mt-4 pt-3 border-t border-gray-100">
+          <p className="text-xs text-gray-500 text-center">
+            Fechas disponibles desde {MIN_ALLOWED_YEAR}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

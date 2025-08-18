@@ -355,13 +355,17 @@ export default function Home() {
     if (!extendedSession?.accessToken) return;
 
     try {
+      // Combine date and time into a single Date object
+      const [hours, minutes] = transaction.time.split(':').map(Number);
+      const dateWithTime = new Date(transaction.date);
+      dateWithTime.setHours(hours, minutes, 0, 0);
       
       // Create transaction via API
       const createdTransaction = await createTransaction(extendedSession.accessToken, {
         merchant: transaction.merchant,
         amount: transaction.amount,
         budgetId: transaction.budgetId || undefined,
-        date: transaction.date, // Pass Date object directly
+        date: dateWithTime, // Pass Date object with correct time
         description: '',
         type: 'expense',
         source: 'Manual'

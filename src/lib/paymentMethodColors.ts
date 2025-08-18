@@ -30,6 +30,7 @@ export function getPaymentMethodColor(paymentMethod: string | undefined): string
     // Billeteras virtuales
     'mercado pago': 'text-blue-500',
     'uala': 'text-purple-600',
+    'belo': 'text-violet-600',
     'modo': 'text-blue-500',
     'cuenta dni': 'text-green-600',
     'paypal': 'text-blue-600',

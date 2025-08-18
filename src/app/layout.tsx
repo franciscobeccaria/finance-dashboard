@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Presus. - Gestión de Presupuestos Personales",
+  title: process.env.NODE_ENV === 'development' ? "[DEV] Presus. - Gestión de Presupuestos Personales" : "Presus. - Gestión de Presupuestos Personales",
   description: "Controla tus finanzas personales con Presus. Gestiona presupuestos, registra gastos y visualiza tu progreso financiero en tiempo real.",
   keywords: ["presupuestos", "finanzas personales", "gastos", "control financiero", "dinero", "ahorro", "presus"],
   authors: [{ name: "Presus" }],
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico" },
-      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: process.env.NODE_ENV === 'development' ? "/favicon-dev.svg" : "/favicon.svg", type: "image/svg+xml" },
       { url: "/icon-192.svg", sizes: "192x192", type: "image/svg+xml" },
       { url: "/icon-512.svg", sizes: "512x512", type: "image/svg+xml" },
     ],

@@ -140,12 +140,24 @@ export const useTransactionStore = create<TransactionStore>((set, get) => ({
     
     // Solo agregar si ya tenemos datos para ese mes en cache
     if (transactionsByMonth[monthKey]) {
-      set(state => ({
-        transactionsByMonth: {
-          ...state.transactionsByMonth,
-          [monthKey]: [transaction, ...state.transactionsByMonth[monthKey]]
-        }
-      }));
+      set(state => {
+        const existingTransactions = state.transactionsByMonth[monthKey];
+        const updatedTransactions = [...existingTransactions, transaction];
+        
+        // Ordenar todas las transacciones por fecha descendente (más recientes primero)
+        updatedTransactions.sort((a, b) => {
+          const dateA = new Date(a.transaction_date);
+          const dateB = new Date(b.transaction_date);
+          return dateB.getTime() - dateA.getTime();
+        });
+        
+        return {
+          transactionsByMonth: {
+            ...state.transactionsByMonth,
+            [monthKey]: updatedTransactions
+          }
+        };
+      });
     }
   },
 
