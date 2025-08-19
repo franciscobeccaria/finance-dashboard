@@ -38,10 +38,11 @@ Una aplicación web moderna para gestión financiera personal con sincronizació
 ### 🔄 En Planificación (Sprint 3-4)
 
 - **OR-004: Carga de Transacciones vía Imágenes** - Decisiones técnicas tomadas para revolucionar entrada de datos
-- **Stack seleccionado**: OpenAI Vision API como solución MVP (sin fallback inicial)  
-- **Enfoque específico**: Screenshots de apps bancarias argentinas (Mercado Pago, Brubank, Belo, Santander)
+- **Stack seleccionado**: OpenAI Vision API (gpt-4o-mini con detail:"low") como solución MVP
+- **Enfoque específico**: Screenshots de apps bancarias argentinas + parsing de PDFs de resúmenes
+- **Costos reales**: $0.0003-$0.0006 por imagen, $0.002-$0.005 por PDF (~centavos por usuario/mes)
 - **Capacidad**: Múltiples transacciones por imagen con processing backend distribuido
-- **Arquitectura**: Backend OCR processing + Frontend review interface + ~$635/mes para 50k transacciones
+- **Viabilidad**: Costos de pocos centavos por usuario/mes hacen viable la escala del proyecto
 
 ## ✨ Funcionalidades
 
@@ -178,7 +179,14 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
   Revisar la sección Settings actual y evaluar si ocultarla temporalmente hasta definir funcionalidades específicas.
 
 - **OR-004**: **Carga de Transacciones vía Imágenes**  
-  Implementar funcionalidad para agregar transacciones manuales usando capturas de pantalla, con IA para extraer datos (monto, fecha, merchant).
+  Implementar funcionalidad para agregar transacciones manuales usando capturas de pantalla y PDFs, con IA para extraer datos.
+  
+  **OpenAI API – Costos de Procesamiento:**
+  - **Imágenes** (capturas de apps financieras): gpt-4o-mini con detail:"low" ~$0.0003–$0.0006 por imagen
+  - **200 imágenes/mes por usuario**: ~$0.06–$0.12 USD  
+  - **PDFs** (resúmenes de tarjeta): parsing completo ~$0.002–$0.005 por PDF
+  - **20 PDFs/mes por usuario**: ~$0.05–$0.10 USD
+  - **👉 Costo mensual por usuario**: pocos centavos de dólar, viable para escala del proyecto
 
 - **OR-005**: **WhatsApp Bot para Transacciones**  
   Crear bot de WhatsApp que permita agregar transacciones enviando mensajes, integrando con la API existente.
@@ -206,6 +214,9 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 
 - **OR-013**: **Login Passwordless (Modo Manual)**  
   Permitir a los usuarios registrarse solo con su email (sin conectar Google/Outlook/Apple) a través de un sistema de "magic links". Esto habilita un modo 100% manual de la aplicación.
+
+- **OR-014**: **Integración APIs Bancarias Argentinas**  
+  Conectar directamente con APIs de Mercado Pago, Brubank y Belo para importación automática de transacciones, eliminando dependencia del parsing de Gmail y proporcionando datos más precisos y en tiempo real.
 
 #### **📱 Nuevas Páginas Completas**
 
@@ -348,6 +359,35 @@ Construir grandes páginas de análisis: Dashboard Presupuesto Global (OR-103), 
 
 **🅱️ Opción B: Ampliar el Alcance (Nuevos Usuarios y Canales)**  
 Facilitar entrada a nuevos segmentos: Login Outlook/Apple (OR-012), Bot WhatsApp (OR-005). Captar más usuarios.
+
+---
+
+## 🎯 Enfoque Estratégico Francisco-First
+
+Para maximizar el valor personal antes de escalar a otros usuarios, se propone el siguiente enfoque priorizado:
+
+### **🏗️ Foundation: Entity "Gasto"**
+La piedra angular del sistema debe ser la **Entity "Gasto"** que unifique:
+- **Cuotas**: Compras en cuotas con seguimiento temporal
+- **Débitos automáticos**: Servicios, suscripciones, gastos fijos  
+- **Gastos fijos**: Alquiler, expensas, gastos predecibles mensuales
+
+### **📊 Flujo de Desarrollo Estratégico**
+1. **Construir Entity "Gasto"** con todas sus variantes y lógica de negocio
+2. **Implementar páginas core**:
+   - OR-102: Vista de Cuotas (timeline y seguimiento)
+   - OR-103: Dashboard Presupuesto Global (Excel-like con histórico)
+   - OR-104: Vista de Caja (cash flow y proyecciones)
+
+### **🚀 Features Secundarias (Post-Core)**
+Una vez completado el core, las siguientes features son **facilidades para otros usuarios**:
+- OR-004: Carga de imágenes con IA
+- OR-101: Parsing de PDFs 
+- OR-005: WhatsApp bot
+- OR-014: APIs bancarias múltiples
+
+### **💡 Filosofía de Producto**
+**Personal-first approach**: Resolver completamente el problema de Francisco antes de pensar en mass-market. Esto garantiza un producto con real product-market fit para el usuario objetivo inicial.
 
 ---
 
