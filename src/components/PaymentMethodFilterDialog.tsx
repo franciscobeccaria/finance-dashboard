@@ -16,13 +16,13 @@ import {
 import { PaymentMethodCard } from "@/components/PaymentMethodCard";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Settings, Trash2 } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
+import { Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 import { getPaymentMethodColor } from "@/lib/paymentMethodColors";
-import { fetchPaymentMethods, deletePaymentMethod, PaymentMethod } from "@/services/api";
+import { deletePaymentMethod, PaymentMethod } from "@/services/api";
 import { toast } from "sonner";
 
 // Extended session type
@@ -50,7 +50,6 @@ interface PaymentMethodFilterDialogProps {
   transactions: Transaction[];
   availableBudgets: Budget[];
   paymentMethods: PaymentMethod[];
-  onOpenCreatePaymentMethod?: () => void;
   onPaymentMethodsChange?: (paymentMethods: PaymentMethod[]) => void;
 }
 
@@ -89,7 +88,6 @@ export function PaymentMethodFilterDialog({
   transactions,
   availableBudgets,
   paymentMethods,
-  onOpenCreatePaymentMethod,
   onPaymentMethodsChange,
 }: PaymentMethodFilterDialogProps) {
   const { data: session } = useSession();

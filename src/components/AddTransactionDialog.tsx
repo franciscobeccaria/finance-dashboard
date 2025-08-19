@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useState } from "react";
 import { Calendar as CalendarIcon, Clock, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,15 +19,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { getPaymentMethodColor } from "@/lib/paymentMethodColors";
-import { fetchPaymentMethods, PaymentMethod } from "@/services/api";
-
-// Extended session type
-type ExtendedSession = {
-  accessToken?: string;
-  refreshToken?: string;
-  error?: string;
-};
+import { PaymentMethod } from "@/services/api";
 
 interface Budget {
   id: string;
@@ -81,8 +72,6 @@ export function AddTransactionDialog({
       toast.error("Por favor completa todos los campos");
       return;
     }
-
-    // Use selected payment method directly
 
     setIsLoading(true);
     try {

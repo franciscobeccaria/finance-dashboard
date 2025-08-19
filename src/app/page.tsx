@@ -20,7 +20,7 @@ import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { AddPaymentMethodDialog } from "@/components/AddPaymentMethodDialog";
 import { ViewTransactionsDialog } from "@/components/ViewTransactionsDialog";
 import { PaymentMethodFilterDialog } from "@/components/PaymentMethodFilterDialog";
-import { fetchBudgets, BudgetWithSpent, createBudget, updateBudget, deleteBudget, updateTransactionBudget, createTransaction, deleteTransaction, fetchPaymentMethods, PaymentMethod } from "@/services/api";
+import { fetchBudgets, BudgetWithSpent, createBudget, updateBudget, deleteBudget, updateTransactionBudget, createTransaction, deleteTransaction, fetchPaymentMethods, PaymentMethod, BackendTransaction } from "@/services/api";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { LoginButton } from "@/components/LoginButton";
 import { setPaymentMethodsCache } from "@/lib/paymentMethodColors";
@@ -62,7 +62,7 @@ const isMovimientosTransaction = (transaction: UITransaction, allBudgets: Budget
 };
 
 // Helper function to get payment method display text based on backend logic
-const getPaymentMethodDisplayText = (transaction: any, paymentMethods: PaymentMethod[]): string => {
+const getPaymentMethodDisplayText = (transaction: BackendTransaction, paymentMethods: PaymentMethod[]): string => {
   // If source is not "Manual", show source (automatic transactions)
   if (transaction.source !== "Manual") {
     return transaction.source;
@@ -709,10 +709,6 @@ export default function Home() {
         transactions={uiTransactions}
         availableBudgets={allCategories}
         paymentMethods={paymentMethods}
-        onOpenCreatePaymentMethod={() => {
-          setPaymentMethodDialogOpen(false);
-          setCreatePaymentMethodDialogOpen(true);
-        }}
         onPaymentMethodsChange={(updatedMethods) => {
           setPaymentMethods(updatedMethods);
           setPaymentMethodsCache(updatedMethods);
