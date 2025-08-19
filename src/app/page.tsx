@@ -17,10 +17,13 @@ import { TotalBudgetCardSkeleton } from "@/components/TotalBudgetCardSkeleton";
 import { EditBudgetDialog, Budget as BudgetType } from "@/components/EditBudgetDialog";
 import { Edit } from "lucide-react";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
+import { AddPaymentMethodDialog } from "@/components/AddPaymentMethodDialog";
 import { ViewTransactionsDialog } from "@/components/ViewTransactionsDialog";
-import { fetchBudgets, BudgetWithSpent, createBudget, updateBudget, deleteBudget, updateTransactionBudget, createTransaction, deleteTransaction } from "@/services/api";
+import { PaymentMethodFilterDialog } from "@/components/PaymentMethodFilterDialog";
+import { fetchBudgets, BudgetWithSpent, createBudget, updateBudget, deleteBudget, updateTransactionBudget, createTransaction, deleteTransaction, fetchPaymentMethods, PaymentMethod } from "@/services/api";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { LoginButton } from "@/components/LoginButton";
+import { setPaymentMethodsCache } from "@/lib/paymentMethodColors";
 
 // We're now using BudgetType from EditBudgetDialog.tsx
 
@@ -58,6 +61,25 @@ const isMovimientosTransaction = (transaction: UITransaction, allBudgets: Budget
   return budget ? budget.name.toLowerCase() === "movimientos" : false;
 };
 
+// Helper function to get payment method display text based on backend logic
+const getPaymentMethodDisplayText = (transaction: any, paymentMethods: PaymentMethod[]): string => {
+  // If source is not "Manual", show source (automatic transactions)
+  if (transaction.source !== "Manual") {
+    return transaction.source;
+  }
+  
+  // If source is "Manual" and has payment_method_id, find and show payment method name
+  if (transaction.payment_method_id) {
+    const paymentMethod = paymentMethods.find(pm => pm.id === transaction.payment_method_id);
+    if (paymentMethod) {
+      return paymentMethod.name;
+    }
+  }
+  
+  // If source is "Manual" but no payment method selected, show "Manual"
+  return "Manual";
+};
+
 // Budget categories are now loaded from user initialization
 
 export default function Home() {
@@ -65,6 +87,8 @@ export default function Home() {
   
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [paymentMethodDialogOpen, setPaymentMethodDialogOpen] = useState(false);
+  const [createPaymentMethodDialogOpen, setCreatePaymentMethodDialogOpen] = useState(false);
   const [editBudgetDialogOpen, setEditBudgetDialogOpen] = useState(false);
   const [currentEditBudget, setCurrentEditBudget] = useState<BudgetType | undefined>(undefined);
   
@@ -83,6 +107,7 @@ export default function Home() {
   // Local state for UI and budgets
   const [uiTransactions, setUiTransactions] = useState<UITransaction[]>([]);
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -350,6 +375,7 @@ export default function Home() {
     budgetId: string;
     date: Date;
     time: string;
+    paymentMethodId?: string;
   }) => {
     const extendedSession = session as typeof session & ExtendedSession;
     if (!extendedSession?.accessToken) return;
@@ -368,7 +394,8 @@ export default function Home() {
         date: dateWithTime, // Pass Date object with correct time
         description: '',
         type: 'expense',
-        source: 'Manual'
+        source: 'Manual',
+        paymentMethodId: transaction.paymentMethodId
       });
       
       
@@ -461,14 +488,14 @@ export default function Home() {
           budget: budgetName,
           budgetId: transaction.budget_id || '',
           time: `${hours}:${minutes}`,
-          paymentMethod: transaction.source,
+          paymentMethod: getPaymentMethodDisplayText(transaction, paymentMethods),
           description: transaction.description || undefined,
           isManual: !transaction.is_automatic // Manual if not automatic
         };
       });
     
     setUiTransactions(transformedTransactions);
-  }, [transactions, budgets]);
+  }, [transactions, budgets, paymentMethods]);
 
   
   // Track if data has been loaded to prevent unnecessary refetches
@@ -505,9 +532,17 @@ export default function Home() {
       
       try {
         
-        // Load budgets
-        const budgetData = await fetchBudgets(extendedSession.accessToken);
+        // Load budgets and payment methods in parallel
+        const [budgetData, paymentMethodData] = await Promise.all([
+          fetchBudgets(extendedSession.accessToken),
+          fetchPaymentMethods(extendedSession.accessToken)
+        ]);
+        
         setBudgets(budgetData);
+        setPaymentMethods(paymentMethodData);
+        
+        // Update payment method color cache
+        setPaymentMethodsCache(paymentMethodData);
         
         // Load transactions for current month using store
         await fetchTransactionsForMonth(extendedSession.accessToken, selectedDate);
@@ -577,6 +612,8 @@ export default function Home() {
           onAddTransaction={() => setAddDialogOpen(true)} 
           onCreateBudget={handleAddBudget}
           onViewTransactions={() => setViewDialogOpen(true)}
+          onViewPaymentMethods={() => setPaymentMethodDialogOpen(true)}
+          onCreatePaymentMethod={() => setCreatePaymentMethodDialogOpen(true)}
           selectedDate={selectedDate}
           onDateChange={handleDateChange}
           isLoading={isCurrentlyLoading}
@@ -654,6 +691,7 @@ export default function Home() {
         open={addDialogOpen} 
         onOpenChange={setAddDialogOpen}
         budgets={budgets}
+        paymentMethods={paymentMethods}
         onSave={handleCreateTransaction}
       />
       <ViewTransactionsDialog
@@ -663,6 +701,34 @@ export default function Home() {
         onCategorize={handleCategorizeTransaction}
         onDelete={handleDeleteTransaction}
         availableBudgets={allCategories}
+      />
+      
+      <PaymentMethodFilterDialog
+        open={paymentMethodDialogOpen}
+        onOpenChange={setPaymentMethodDialogOpen}
+        transactions={uiTransactions}
+        availableBudgets={allCategories}
+        paymentMethods={paymentMethods}
+        onOpenCreatePaymentMethod={() => {
+          setPaymentMethodDialogOpen(false);
+          setCreatePaymentMethodDialogOpen(true);
+        }}
+        onPaymentMethodsChange={(updatedMethods) => {
+          setPaymentMethods(updatedMethods);
+          setPaymentMethodsCache(updatedMethods);
+        }}
+      />
+      
+      <AddPaymentMethodDialog
+        open={createPaymentMethodDialogOpen}
+        onOpenChange={setCreatePaymentMethodDialogOpen}
+        onSave={(newPaymentMethod) => {
+          // Add to payment methods state
+          const updatedMethods = [...paymentMethods, newPaymentMethod];
+          setPaymentMethods(updatedMethods);
+          // Update cache for color lookups
+          setPaymentMethodsCache(updatedMethods);
+        }}
       />
       
       <EditBudgetDialog

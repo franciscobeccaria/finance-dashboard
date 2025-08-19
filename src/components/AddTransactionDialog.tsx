@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { Calendar as CalendarIcon, Clock, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +20,15 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { getPaymentMethodColor } from "@/lib/paymentMethodColors";
+import { fetchPaymentMethods, PaymentMethod } from "@/services/api";
+
+// Extended session type
+type ExtendedSession = {
+  accessToken?: string;
+  refreshToken?: string;
+  error?: string;
+};
 
 interface Budget {
   id: string;
@@ -32,19 +42,24 @@ interface AddTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   budgets: Budget[];
+  paymentMethods: PaymentMethod[];
   onSave: (transaction: {
     merchant: string;
     amount: number;
     budgetId: string;
     date: Date;
     time: string;
+    paymentMethodId?: string;
   }) => Promise<void>;
 }
+
+// This will be replaced with API call to fetch payment methods
 
 export function AddTransactionDialog({
   open,
   onOpenChange,
   budgets,
+  paymentMethods,
   onSave,
 }: AddTransactionDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -53,16 +68,21 @@ export function AddTransactionDialog({
   const [merchant, setMerchant] = useState("");
   const [amount, setAmount] = useState("");
   const [selectedBudgetId, setSelectedBudgetId] = useState("");
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   // Filter out special budgets (like "Movimientos")
   const availableBudgets = budgets.filter(budget => !budget.isSpecial);
+
+  // Payment methods now come as props, no need to load them
 
   const handleSave = async () => {
     if (!merchant || !amount || !selectedBudgetId || !date) {
       toast.error("Por favor completa todos los campos");
       return;
     }
+
+    // Use selected payment method directly
 
     setIsLoading(true);
     try {
@@ -72,12 +92,14 @@ export function AddTransactionDialog({
         budgetId: selectedBudgetId,
         date,
         time,
+        paymentMethodId: selectedPaymentMethodId || undefined,
       });
       
       // Reset form
       setMerchant("");
       setAmount("");
       setSelectedBudgetId("");
+      setSelectedPaymentMethodId("");
       setDate(new Date());
       setTime("12:00");
       
@@ -194,6 +216,33 @@ export function AddTransactionDialog({
                   onChange={(e) => setTime(e.target.value)}
                   className="w-full"
                 />
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+            <label htmlFor="paymentMethod" className="text-left sm:text-right text-sm">
+              Medio de Pago
+            </label>
+            <div className="sm:col-span-3">
+              <div className="flex items-center">
+                <CreditCard className="mr-2 h-4 w-4 text-gray-400" />
+                <Select value={selectedPaymentMethodId} onValueChange={setSelectedPaymentMethodId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleccionar medio de pago (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentMethods.map((method) => (
+                      <SelectItem 
+                        key={method.id} 
+                        value={method.id}
+                        className={method.color || ""}
+                      >
+                        {method.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

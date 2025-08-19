@@ -33,7 +33,7 @@ export interface BackendTransaction {
   currency: string;
   transaction_type: 'expense' | 'income';
   source: string;
-  payment_method: string | null;
+  payment_method_id: string | null;
   description: string | null;
   is_automatic: boolean;
   created_at: string;
@@ -47,6 +47,7 @@ export interface BackendTransaction {
     created_at: string;
     updated_at: string;
   } | null;
+  paymentMethod?: PaymentMethod | null; // Include payment method relation
 }
 
 // Backend URL configuration
@@ -371,6 +372,7 @@ export async function createTransaction(
     description?: string;
     type?: 'expense' | 'income';
     source?: string;
+    paymentMethodId?: string;
   }
 ): Promise<BackendTransaction> {
   try {
@@ -393,6 +395,7 @@ export async function createTransaction(
         description: transaction.description,
         transaction_type: transaction.type || 'expense',
         source: transaction.source || 'Manual',
+        payment_method_id: transaction.paymentMethodId || null, // Add payment method ID
         currency: 'ARS' // Default currency
       })
     });
@@ -481,6 +484,131 @@ export async function updateTransactionBudget(
     return responseData;
   } catch (error) {
     console.error('❌ Network/Parse Error:', error);
+    throw error;
+  }
+}
+
+// Interface for payment method data from backend
+export interface PaymentMethod {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Fetch all payment methods for the authenticated user
+ * @param accessToken - Google access token from session
+ * @returns Promise with an array of payment methods
+ */
+export async function fetchPaymentMethods(accessToken: string): Promise<PaymentMethod[]> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/payment-methods`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      
+      // Handle authentication errors specifically
+      if (response.status === 401) {
+        console.error('❌ Authentication failed - token expired or invalid');
+        throw new Error('AUTHENTICATION_ERROR');
+      }
+      
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+
+    const data = await response.json();
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching payment methods:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a new payment method
+ * @param accessToken - Google access token from session
+ * @param paymentMethod - Payment method data to create
+ * @returns Promise with the created payment method
+ */
+export async function createPaymentMethod(
+  accessToken: string,
+  paymentMethod: { name: string; color: string }
+): Promise<PaymentMethod> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/payment-methods`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(paymentMethod)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      
+      // Handle specific error cases
+      if (response.status === 409) {
+        throw new Error('Ya existe un medio de pago con ese nombre');
+      }
+      
+      if (response.status === 401) {
+        console.error('❌ Authentication failed - token expired or invalid');
+        throw new Error('AUTHENTICATION_ERROR');
+      }
+      
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating payment method:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a payment method
+ * @param accessToken - Google access token from session
+ * @param paymentMethodId - ID of the payment method to delete
+ */
+export async function deletePaymentMethod(
+  accessToken: string, 
+  paymentMethodId: string
+): Promise<void> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/payment-methods/${paymentMethodId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      
+      if (response.status === 404) {
+        throw new Error('Medio de pago no encontrado');
+      }
+      
+      if (response.status === 401) {
+        console.error('❌ Authentication failed - token expired or invalid');
+        throw new Error('AUTHENTICATION_ERROR');
+      }
+      
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+  } catch (error) {
+    console.error('Error deleting payment method:', error);
     throw error;
   }
 }

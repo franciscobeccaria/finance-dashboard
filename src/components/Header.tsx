@@ -1,4 +1,4 @@
-import { Plus, Eye, CreditCard, PieChart } from "lucide-react";
+import { Plus, Eye, CreditCard, PieChart, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -13,12 +13,14 @@ interface HeaderProps {
   onAddTransaction: () => void;
   onCreateBudget: () => void;
   onViewTransactions: () => void;
+  onViewPaymentMethods: () => void;
+  onCreatePaymentMethod: () => void;
   selectedDate: Date;
   onDateChange: (date: Date) => void;
   isLoading?: boolean;
 }
 
-export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, selectedDate, onDateChange, isLoading = false }: HeaderProps) {
+export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, onViewPaymentMethods, onCreatePaymentMethod, selectedDate, onDateChange, isLoading = false }: HeaderProps) {
   return (
     <header className="w-full py-4 px-1">
       {/* Mobile Layout: Stacked */}
@@ -42,6 +44,20 @@ export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, s
               <span className="sr-only">Ver Transacciones</span>
             </Button>
             
+            <Button 
+              onClick={onViewPaymentMethods} 
+              variant="outline"
+              size="icon"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <div className="h-5 w-5 border-2 border-t-transparent border-blue-800 rounded-full animate-spin" />
+              ) : (
+                <Wallet className="h-5 w-5 text-blue-800" />
+              )}
+              <span className="sr-only">Ver Medios de Pago</span>
+            </Button>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" disabled={isLoading}>
@@ -60,6 +76,10 @@ export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, s
                 <DropdownMenuItem onClick={onCreateBudget} className="cursor-pointer" disabled={isLoading}>
                   <PieChart className="h-4 w-4 mr-2" />
                   Nuevo Presupuesto
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onCreatePaymentMethod} className="cursor-pointer" disabled={isLoading}>
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Crear Medio de Pago
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -109,6 +129,20 @@ export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, s
             <span className="sr-only">Ver Transacciones</span>
           </Button>
           
+          <Button 
+            onClick={onViewPaymentMethods} 
+            variant="outline"
+            size="icon"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <div className="h-5 w-5 border-2 border-t-transparent border-blue-800 rounded-full animate-spin" />
+            ) : (
+              <Wallet className="h-5 w-5 text-blue-800" />
+            )}
+            <span className="sr-only">Ver Medios de Pago</span>
+          </Button>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon" disabled={isLoading}>
@@ -127,6 +161,10 @@ export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, s
               <DropdownMenuItem onClick={onCreateBudget} className="cursor-pointer" disabled={isLoading}>
                 <PieChart className="h-4 w-4 mr-2" />
                 Nuevo Presupuesto
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onCreatePaymentMethod} className="cursor-pointer" disabled={isLoading}>
+                <Wallet className="h-4 w-4 mr-2" />
+                Crear Medio de Pago
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
