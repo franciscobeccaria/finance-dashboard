@@ -218,6 +218,17 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 - **OR-014**: **Integración APIs Bancarias Argentinas**  
   Conectar directamente con APIs de Mercado Pago, Brubank y Belo para importación automática de transacciones, eliminando dependencia del parsing de Gmail y proporcionando datos más precisos y en tiempo real.
 
+- **OR-015**: **Vista por Cierre de Tarjeta de Crédito**  
+  Implementar funcionalidad para filtrar presupuestos y transacciones por períodos de facturación de tarjetas de crédito en lugar del mes calendario tradicional.
+  
+  **Componentes:**
+  - **Enhancement Payment Methods**: Agregar tipo "tarjeta de crédito" y configuración de día de cierre (1-31)
+  - **Dashboard Enhancement**: Switch/toggle cerca del selector de mes para alternar entre "Mes Calendario" vs "Período Resumen"
+  - **Filtrado Inteligente**: Transacciones agrupadas por período de facturación real con cálculo automático de rangos según cierres
+  - **Automatización Futura**: Integración con OR-101 (PDFs parsing) para auto-detección de períodos y validación de transacciones
+  
+  **Valor**: Permite vista real de gastos por tarjeta según ciclo de facturación, crítico para manejo financiero argentino donde los cierres no coinciden con meses calendario.
+
 #### **📱 Nuevas Páginas Completas**
 
 - **OR-101**: **Unión de Resúmenes PDF**  
