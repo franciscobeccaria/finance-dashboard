@@ -1,4 +1,5 @@
-import { Plus, Eye, CreditCard, PieChart, Wallet } from "lucide-react";
+import { Plus, Eye, CreditCard, PieChart, Wallet, CalendarDays, BarChart3 } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -21,25 +22,65 @@ interface HeaderProps {
 }
 
 export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, onViewPaymentMethods, onCreatePaymentMethod, selectedDate, onDateChange, isLoading = false }: HeaderProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  const isOnGastosPage = pathname === '/gastos';
+  const isOnPrevisionPage = pathname === '/prevision';
+  const isOnHomePage = pathname === '/';
   return (
     <header className="w-full py-4 px-1">
       {/* Mobile Layout: Stacked */}
       <div className="sm:hidden">
         {/* Primera línea: Título + Botones */}
         <div className="flex justify-between items-center w-full mb-3">
-          <h1 className="text-2xl font-bold text-blue-800">Presus.</h1>
+          <button 
+            onClick={() => router.push('/')}
+            className="text-2xl font-bold text-blue-800 hover:text-blue-900 transition-colors"
+          >
+            Presus.
+          </button>
           <div className="flex items-center gap-1">
             <Button 
-              onClick={onViewTransactions} 
-              variant="default"
+              onClick={() => router.push('/gastos')}
+              variant={isOnGastosPage ? "default" : "outline"}
               size="icon"
-              className="bg-blue-800 hover:bg-blue-900 text-white"
+              className={isOnGastosPage ? "bg-blue-800 hover:bg-blue-900 text-white" : ""}
               disabled={isLoading}
             >
               {isLoading ? (
-                <div className="h-5 w-5 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                <div className={`h-5 w-5 border-2 border-t-transparent ${isOnGastosPage ? 'border-white' : 'border-blue-800'} rounded-full animate-spin`} />
               ) : (
-                <Eye className="h-5 w-5" />
+                <CalendarDays className="h-5 w-5" />
+              )}
+              <span className="sr-only">Gastos</span>
+            </Button>
+            
+            <Button 
+              onClick={() => router.push('/prevision')}
+              variant={isOnPrevisionPage ? "default" : "outline"}
+              size="icon"
+              className={isOnPrevisionPage ? "bg-purple-800 hover:bg-purple-900 text-white" : ""}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <div className={`h-5 w-5 border-2 border-t-transparent ${isOnPrevisionPage ? 'border-white' : 'border-purple-800'} rounded-full animate-spin`} />
+              ) : (
+                <BarChart3 className="h-5 w-5" />
+              )}
+              <span className="sr-only">Previsión</span>
+            </Button>
+            
+            <Button 
+              onClick={onViewTransactions} 
+              variant="outline"
+              size="icon"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <div className="h-5 w-5 border-2 border-t-transparent border-blue-800 rounded-full animate-spin" />
+              ) : (
+                <Eye className="h-5 w-5 text-blue-800" />
               )}
               <span className="sr-only">Ver Transacciones</span>
             </Button>
@@ -102,7 +143,12 @@ export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, o
 
       {/* Desktop Layout: Single Line */}
       <div className="hidden sm:flex justify-between items-center w-full">
-        <h1 className="text-2xl font-bold text-blue-800 flex-shrink-0">Presus.</h1>
+        <button 
+          onClick={() => router.push('/')}
+          className="text-2xl font-bold text-blue-800 hover:text-blue-900 transition-colors flex-shrink-0"
+        >
+          Presus.
+        </button>
         
         {/* Date Selector - Center */}
         <div className="flex-1 flex justify-center min-w-0 mx-2">
@@ -115,16 +161,45 @@ export function Header({ onAddTransaction, onCreateBudget, onViewTransactions, o
         
         <div className="flex items-center gap-2 flex-shrink-0">
           <Button 
-            onClick={onViewTransactions} 
-            variant="default"
+            onClick={() => router.push('/gastos')}
+            variant={isOnGastosPage ? "default" : "outline"}
             size="icon"
-            className="bg-blue-800 hover:bg-blue-900 text-white"
+            className={isOnGastosPage ? "bg-blue-800 hover:bg-blue-900 text-white" : ""}
             disabled={isLoading}
           >
             {isLoading ? (
-              <div className="h-5 w-5 border-2 border-t-transparent border-white rounded-full animate-spin" />
+              <div className={`h-5 w-5 border-2 border-t-transparent ${isOnGastosPage ? 'border-white' : 'border-blue-800'} rounded-full animate-spin`} />
             ) : (
-              <Eye className="h-5 w-5" />
+              <CalendarDays className="h-5 w-5" />
+            )}
+            <span className="sr-only">Gastos</span>
+          </Button>
+          
+          <Button 
+            onClick={() => router.push('/prevision')}
+            variant={isOnPrevisionPage ? "default" : "outline"}
+            size="icon"
+            className={isOnPrevisionPage ? "bg-purple-800 hover:bg-purple-900 text-white" : ""}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <div className={`h-5 w-5 border-2 border-t-transparent ${isOnPrevisionPage ? 'border-white' : 'border-purple-800'} rounded-full animate-spin`} />
+            ) : (
+              <BarChart3 className="h-5 w-5" />
+            )}
+            <span className="sr-only">Previsión</span>
+          </Button>
+          
+          <Button 
+            onClick={onViewTransactions} 
+            variant="outline"
+            size="icon"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <div className="h-5 w-5 border-2 border-t-transparent border-blue-800 rounded-full animate-spin" />
+            ) : (
+              <Eye className="h-5 w-5 text-blue-800" />
             )}
             <span className="sr-only">Ver Transacciones</span>
           </Button>

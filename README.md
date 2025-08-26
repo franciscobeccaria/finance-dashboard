@@ -15,7 +15,15 @@ Una aplicación web moderna para gestión financiera personal con sincronizació
 
 ## 🎯 Estado Actual
 
-**Presus** está en MVP completo y funcionalmente listo. La aplicación permite:
+**Presus** está en MVP completo con sistema integral de gastos. La aplicación tiene **objetivos duales**:
+
+### 🥇 **PRIORIDAD 1: Uso Personal Septiembre 2025**
+> Manejar gastos reales de septiembre 2025 usando Presus con localStorage como storage principal
+
+### 🥈 **PRIORIDAD 2: Lanzamiento Público** 
+> Preparar para lanzamiento público (postponed hasta después del uso personal exitoso)
+
+**La aplicación actualmente permite:**
 
 - ✅ **Autenticación Google OAuth** con gestión de sesiones
 - ✅ **Sincronización automática** de transacciones desde Gmail (Santander, Naranja X, Mercado Libre)
@@ -25,6 +33,8 @@ Una aplicación web moderna para gestión financiera personal con sincronizació
 - ✅ **Navegación temporal** por meses y años
 - ✅ **UI/UX responsive** con sistema de diseño consistente
 - ✅ **PWA ready** con manifest y metadatos completos
+- ✅ **Sistema completo de Gastos V3** con drag & drop y secciones organizadas
+- ✅ **Previsión V2 integrada** con vista horizontal mes-a-mes estilo Excel
 
 ### ✅ Completado Recientemente (Agosto 2025)
 
@@ -34,6 +44,11 @@ Una aplicación web moderna para gestión financiera personal con sincronizació
 - **🔧 Type Safety**: Mejoras de TypeScript y eliminación de código no utilizado
 - **🎨 UX mejorada**: Rediseñado flujo de descripciones con input siempre visible
 - **⚡ Notificaciones**: Implementado sistema de toasts con Sonner
+- **💰 Sistema de Gastos V3**: Gestión completa con drag & drop y secciones organizadas
+- **📊 Previsión V2**: Vista horizontal mes-a-mes estilo Excel integrada
+- **🏗️ Arquitectura MonthlyInstance**: Granularidad total por mes/gasto para control máximo
+- **🔄 Reorganización de rutas**: V3 como principal, V1 como backup histórico
+- **🧹 Código legacy eliminado**: Limpieza completa de duplicaciones y archivos V2
 
 ### 🔄 En Planificación (Sprint 3-4)
 
@@ -43,6 +58,27 @@ Una aplicación web moderna para gestión financiera personal con sincronizació
 - **Costos reales**: $0.0003-$0.0006 por imagen, $0.002-$0.005 por PDF (~centavos por usuario/mes)
 - **Capacidad**: Múltiples transacciones por imagen con processing backend distribuido
 - **Viabilidad**: Costos de pocos centavos por usuario/mes hacen viable la escala del proyecto
+
+### ✅ Checkpoint Agosto 2025 - Sistema de Gastos Completo
+
+Siguiendo el **Francisco-First approach**, completamos el sistema core de gestión de gastos:
+
+**🎯 Lo que se logró:**
+- ✅ **Gastos V3**: Sistema completo reemplazando experimentos V2 con arquitectura sólida
+- ✅ **Previsión V2**: Integración perfecta con vista mensual estilo Excel
+- ✅ **Arquitectura limpia**: Eliminación total de código legacy y duplicaciones V2
+- ✅ **UX mejorada**: Drag & drop, formularios intuitivos, tooltips informativos
+- ✅ **Reorganización de rutas**: /gastos → V3, /prevision → V2 como principales
+
+**🔧 Decisiones técnicas clave:**
+- **Migración @dnd-kit**: Reemplazo de react-beautiful-dnd para compatibilidad React 19
+- **Sistema MonthlyExpenseInstance**: Máxima granularidad mes-a-mes por gasto individual  
+- **Tabla unificada**: Una sola tabla con secciones simples (no collapsible como error inicial)
+- **Agrupación parent_expense_id**: Previsiones muestran un gasto por fila, meses en columnas
+- **localStorage como storage principal**: Gastos locales, backend para presupuestos/transacciones
+
+**📈 Resultado Francisco-First:**
+El sistema ahora está listo para **uso personal real en septiembre 2025**, priorizando funcionalidad sobre features avanzadas. Base sólida para futuras iteraciones.
 
 ## ✨ Funcionalidades
 
@@ -74,6 +110,17 @@ Una aplicación web moderna para gestión financiera personal con sincronizació
 - Integración automática con transacciones importadas
 - Caché de colores para consistencia visual
 
+### 💰 **Gastos y Previsión**
+- **Sistema completo V3** con secciones organizadas: CUOTAS, GASTOS FIJOS, PRESUPUESTOS
+- **Drag & drop** para reordenamiento dentro de secciones (@dnd-kit)
+- **Previsión V2** con vista Excel-like: una fila por gasto, columnas por mes
+- **Formularios mejorados** estilo V1 con prefill options para cuotas comunes
+- **Tooltips informativos** para observaciones de pago y detalles adicionales
+- **UX diferenciada**: checkbox para cuotas, dialog para gastos variables
+- **Arquitectura granular**: BaseExpense → MonthlyExpenseInstance para control mensual
+- **Proyección inteligente**: agrupación por parent_expense_id en vista de previsiones
+- **Navegación temporal** con control de períodos y meses visibles
+
 ### 🎨 **UI/UX**
 - Diseño responsive mobile-first
 - Sistema de toasts para feedback
@@ -90,6 +137,9 @@ Una aplicación web moderna para gestión financiera personal con sincronizació
 - **Radix UI** - Accessible components
 - **Zustand** - State management
 - **Custom Color System** - 18 colores predefinidos con caché
+- **@dnd-kit** - Drag & drop (React 19 compatible)
+- **MonthlyExpenseInstance System** - Granularidad mensual total
+- **ForecastV2 System** - Agrupación por parent_expense_id
 
 ### **Backend Integration**
 - **NextAuth.js** - OAuth con Google
@@ -134,9 +184,22 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 
 ## 🚀 Roadmap y Prioridades
 
-### 🥇 **PRIORIDAD 1: Lanzamiento Público (Google Console)**
+### 🥇 **PRIORIDAD 1: Uso Personal Septiembre 2025**
 
-> **🎯 OBJETIVO**: Preparar la app para que cualquiera pueda acceder de forma segura
+> **🎯 OBJETIVO**: Usar Presus para manejar gastos reales de septiembre 2025 con localStorage
+
+**SEP-001**: **Testing en Producción Real**  
+Usar el sistema completo Gastos V3 + Previsión V2 para gastos personales, identificar pain points y mejoras necesarias durante el uso real.
+
+**SEP-002**: **Integración Backend Híbrida**  
+Mantener gastos en localStorage pero conectar más funciones con backend existente (presupuestos + transacciones ya funcionan).
+
+**SEP-003**: **Refinamiento UX Post-Uso**  
+Iterar sobre la UX basado en experiencia real: formularios, drag & drop, tooltips, navegación temporal.
+
+### 🥈 **PRIORIDAD 2: Lanzamiento Público (Postponed)**
+
+> **🎯 OBJETIVO**: Preparar la app para lanzamiento público (después del uso personal exitoso)
 
 - **PL-001**: **Frontend Security Review**  
   Revisión manual exhaustiva de frontend para identificar vulnerabilidades XSS, client-side secrets expuestos y validaciones faltantes.
@@ -302,7 +365,22 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 - **ST-008**: **Offline Support**  
   Implementar service worker para funcionalidad básica offline con sincronización cuando vuelve la conexión.
 
-## 📅 Roadmap de Desarrollo Detallado
+### **📈 Funcionalidades Futuras (Post-Septiembre 2025)**
+
+#### **Vista de Cuotas (Nice-to-have)**
+> **Evaluación**: Útil para algunos usuarios que quieren seguimiento detallado, pero **no crítico** para funcionalidad core
+
+- **Dashboard especializado** para visualizar cuotas restantes y próximas a vencer
+- **Indicadores de finalizaciones** por mes con timeline visual
+- **Conexión bidireccional** con páginas Gastos y Previsión principales  
+- **Contador intuitivo** similar a Gastos V1 pero completamente integrado
+- **Target users**: Usuarios con muchas compras en cuotas que necesitan seguimiento granular
+
+**⏳ Timing**: Solo después del éxito del uso personal de septiembre 2025 y validación de que realmente agrega valor.
+
+## 📅 Roadmap de Desarrollo Detallado (Postponed para Lanzamiento Público)
+
+> ⚠️ **NOTA**: Este roadmap detallado está **postponed** hasta completar el uso personal exitoso en septiembre 2025
 
 ### **🎯 Versión 0.5 → 0.75: Estabilización y Features Clave Pre-Lanzamiento**
 

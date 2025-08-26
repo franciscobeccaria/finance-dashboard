@@ -19,23 +19,17 @@ export function DateSelector({ selectedDate, onDateChange, isLoading = false }: 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   // Helper functions for date validation
-  const isDateInFuture = (date: Date) => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-    
+  const isDateOutOfRange = (date: Date) => {
     const targetYear = date.getFullYear();
-    const targetMonth = date.getMonth();
     
-    // Future if year is greater, or same year but month is greater than current
-    return targetYear > currentYear || 
-           (targetYear === currentYear && targetMonth > currentMonth);
+    // Check if date is outside allowed range (2023-2027)
+    return targetYear < 2023 || targetYear > 2027;
   };
 
   const canNavigateToNextMonth = () => {
     const nextMonth = new Date(selectedDate);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
-    return !isDateInFuture(nextMonth);
+    return !isDateOutOfRange(nextMonth);
   };
 
   // Helper functions for navigation
@@ -46,9 +40,9 @@ export function DateSelector({ selectedDate, onDateChange, isLoading = false }: 
   };
 
   const goToNextMonth = () => {
-    if (!canNavigateToNextMonth()) return;
     const newDate = new Date(selectedDate);
     newDate.setMonth(newDate.getMonth() + 1);
+    if (isDateOutOfRange(newDate)) return;
     onDateChange(newDate);
   };
 
@@ -127,11 +121,11 @@ function MonthYearPicker({ selectedDate, onDateChange }: MonthYearPickerProps) {
   const [currentYear, setCurrentYear] = useState(selectedDate.getFullYear());
 
   // Helper functions for date validation
-  const MIN_ALLOWED_YEAR = 2022; // Product decision: no data before 2022
+  const MIN_ALLOWED_YEAR = 2023; // Updated range: 2023-2027
+  const MAX_ALLOWED_YEAR = 2027;
   
   const canNavigateToNextYear = () => {
-    const now = new Date();
-    return currentYear < now.getFullYear();
+    return currentYear < MAX_ALLOWED_YEAR;
   };
 
   const canNavigateToPreviousYear = () => {
@@ -139,13 +133,8 @@ function MonthYearPicker({ selectedDate, onDateChange }: MonthYearPickerProps) {
   };
 
   const isMonthDisabled = (monthIndex: number, year: number) => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-    
-    // Future if year is greater, or same year but month is greater than current
-    return year > currentYear || 
-           (year === currentYear && monthIndex > currentMonth);
+    // Disable if outside allowed year range
+    return year < MIN_ALLOWED_YEAR || year > MAX_ALLOWED_YEAR;
   };
   
   const months = [
@@ -240,14 +229,12 @@ function MonthYearPicker({ selectedDate, onDateChange }: MonthYearPickerProps) {
         })}
       </div>
       
-      {/* Date Range Info - Only show when at minimum year */}
-      {currentYear === MIN_ALLOWED_YEAR && (
-        <div className="mt-4 pt-3 border-t border-gray-100">
-          <p className="text-xs text-gray-500 text-center">
-            Fechas disponibles desde {MIN_ALLOWED_YEAR}
-          </p>
-        </div>
-      )}
+      {/* Date Range Info */}
+      <div className="mt-4 pt-3 border-t border-gray-100">
+        <p className="text-xs text-gray-500 text-center">
+          Rango disponible: {MIN_ALLOWED_YEAR} - {MAX_ALLOWED_YEAR}
+        </p>
+      </div>
     </div>
   );
 }
